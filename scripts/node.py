@@ -16,6 +16,23 @@ from robot import Robot
 
 
 class WaiterRobotsNode(object):
+
+    def __init__(self):
+        # declare attributes
+        self.map = []
+        self.robots = []
+        self.tableLocations = []
+        self.activePaths = []
+        
+        
+        
+        
+        self.initialiseMapAndRobots(2)
+        self.printMap()
+
+        print(self.robots)
+
+        # self.orderModel(6)
     
     def printMap(self):
         print("printing map...")
@@ -64,16 +81,7 @@ class WaiterRobotsNode(object):
             self.robots.append(robot)
 
 
-    def __init__(self):
-        self.map = []
-        self.robots = []
 
-        print("Hello World")
-        self.printMap()
-        self.initialiseMapAndRobots(2)
-        self.printMap()
-        print(self.robots)
-        # self.orderModel(6)
 
 
 
