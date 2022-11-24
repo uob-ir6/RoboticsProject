@@ -10,6 +10,8 @@ import rospy
 import random
 import numpy as np
 
+from robot import Robot
+
 
 
 
@@ -26,7 +28,7 @@ class WaiterRobotsNode(object):
 
         
 
-    def initialiseMapAndRobots(self):
+    def initialiseMapAndRobots(self, numberOfRobot):
         print("initialising map and robots...")
         # initialise n*m map with the tables locations T and the kitchen location K 
         # TODO this map is flipped such that it matches our designs and grid, not sure if that was the best call
@@ -51,8 +53,15 @@ class WaiterRobotsNode(object):
         # list table locations for convinience -> done manually can do automatically using the map
         tableLocations = [(2,1),(2,5),(2,9),(6,5), (6,9), (10,9)]
 
-        # initialise robots with their robot id and their pose (x,y,theta) and their state (idle, serving, delivering), their positional state location <x,y> assignment point <x,y>
-        
+        # initialise robots with their robot id and their pose (x,y,theta) and their state (), their positional state location <x,y> assignment point <x,y>
+        for i in range (0, numberOfRobot):
+            robotId = i+1
+            pose = startingLocations[i]
+            state = 'idle'
+            location = startingLocations[i]
+            assignmentPoint = tableLocations[i]
+            robot =  Robot(robotId, pose, state, location, assignmentPoint)
+            self.robots.append(robot)
 
 
     def __init__(self):
@@ -61,8 +70,10 @@ class WaiterRobotsNode(object):
 
         print("Hello World")
         self.printMap()
-        self.initialiseMapAndRobots()
+        self.initialiseMapAndRobots(2)
         self.printMap()
+        print(self.robots)
+        # self.orderModel(6)
 
 
 
@@ -71,14 +82,12 @@ class WaiterRobotsNode(object):
 
     # order simulation model #TODO this is probably a different node
     # will need to listen to the frequency model and add them to a queue
-    def orderModel (numberOfTable):
+    def orderModel (self, numberOfTable):
         # defined demand phases high medium and low
         HIGH = 1 # every factor of 1
         MEDIUM = 2 # every factor of 2
         LOW = 3 # every factor of 3
 
-        # for now Ill set the order frequency to HIGH
-        orderFrequency = HIGH
         while True:
 
             orderFrequency = random.randint(1,3)
@@ -89,22 +98,22 @@ class WaiterRobotsNode(object):
             elif orderFrequency == 3:
                 orderFrequency = LOW
             
-
+            print("switching to demand phade: ", orderFrequency)
             x = 10 # suggested number of orders for each phase
             # randomly change order frequency every x orders with noise
-            numberOfOrders = random.normal(x, 0.5*x)
+            numberOfOrders = np.random.normal(x, 0.5*x)
 
-            for i in range (0,numberOfOrders):
+            for i in range (0, int(numberOfOrders)):
                 # randomly generate order
                 table = random.randint(1, numberOfTable)
-                order = 'T' + str(order)
+                order = 'T' + str(table)
                 # publish order
 
                 print("Order for table " + str(table) + " is " + str(order))
                 #distribution centered around centered around the frequency  
-                rospy.sleep(random.normal(orderFrequency, 0.5 * orderFrequency))
+                rospy.sleep(np.random.normal(orderFrequency, 0.5 * orderFrequency))
 
-
+            
         # send order message to waiter robot system
 
 
