@@ -19,21 +19,30 @@ def orderModel (numberOfTable):
 
     # for now Ill set the order frequency to HIGH
     orderFrequency = HIGH
+    while True:
 
+        orderFrequency = random.randint(1,3)
+        if orderFrequency == 1:
+            orderFrequency = HIGH
+        elif orderFrequency == 2:
+            orderFrequency = MEDIUM
+        elif orderFrequency == 3:
+            orderFrequency = LOW
+        
 
-    x = 10 # suggested number of orders for each phase
-    # randomly change order frequency every x orders with noise
-    numberOfOrders = random.normal(x, 0.5*x)
+        x = 10 # suggested number of orders for each phase
+        # randomly change order frequency every x orders with noise
+        numberOfOrders = random.normal(x, 0.5*x)
 
-    for i in range (0,numberOfOrders):
-        # randomly generate order
-        table = random.randint(1, numberOfTable)
-        order = 'T' + str(order)
-        # publish order
+        for i in range (0,numberOfOrders):
+            # randomly generate order
+            table = random.randint(1, numberOfTable)
+            order = 'T' + str(order)
+            # publish order
 
-        print("Order for table " + str(table) + " is " + str(order))
-        #distribution centered around centered around the frequency  
-        rospy.sleep(random.normal(orderFrequency, 0.5 * orderFrequency))
+            print("Order for table " + str(table) + " is " + str(order))
+            #distribution centered around centered around the frequency  
+            rospy.sleep(random.normal(orderFrequency, 0.5 * orderFrequency))
 
 
     # send order message to waiter robot system
