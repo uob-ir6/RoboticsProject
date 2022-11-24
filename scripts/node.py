@@ -40,8 +40,8 @@ class WaiterRobotsNode(object):
                      ['x',' ','T',' ',' ',' ',' ',' ',' ','K','K','x'],
                      ['x','x','x','x','x','x','x','x','x','x','x','x'] ]
                      
-        # set list of starting locations on the map
-        startingLocations = [(1,1)]
+        # set list of starting locations on the map -> each robot will be assignned their assignment point at the start of the simulation - filling from the left
+        startingLocations = [(1,4),(1,5),(1,6),(1,7) , (3,10),(4,10),(5,10),(6,10),(7,10)]
 
         # initialise robots with their robot id and their pose (x,y,theta) and their state (idle, serving, delivering), their positional state location <x,y> assignment point <x,y>
         
