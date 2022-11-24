@@ -8,6 +8,8 @@ pf.PFLocaliser() to do the localisation.
 
 import rospy
 import random
+import numpy as np
+
 
 
 
@@ -16,7 +18,7 @@ class WaiterRobotsNode(object):
     def printMap(self):
         print("printing map...")
         map = self.map
-        for i in range(0,len(map)):
+        for i in range(len(map)-1,-1, -1):
             for j in range(0,len(map[i])):
                 print(map[i][j], end = '')
                 print('|', end = '')
@@ -27,18 +29,21 @@ class WaiterRobotsNode(object):
     def initialiseMapAndRobots(self):
         print("initialising map and robots...")
         # initialise n*m map with the tables locations T and the kitchen location K 
-        self.map = [ ['x','x','x','x','x','x','x','x','x','x','x','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ','T',' ',' ',' ','T',' ',' ',' ','T','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ','T',' ',' ',' ','T',' ',' ',' ',' ','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
-                     ['x',' ','T',' ',' ',' ',' ',' ',' ','K','K','x'],
-                     ['x','x','x','x','x','x','x','x','x','x','x','x'] ]
+        # TODO this map is flipped such that it matches our designs and grid, not sure if that was the best call
+        self.map = np.array([ 
+                    ['x','x','x','x','x','x','x','x','x','x','x','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ','T',' ',' ',' ','T',' ',' ',' ','T','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ','T',' ',' ',' ','T',' ',' ',' ',' ','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                    ['x',' ','T',' ',' ',' ',' ',' ',' ','K','K','x'],
+                    ['x','x','x','x','x','x','x','x','x','x','x','x'] ])
+        self.map = self.map[::-1]
                      
         # set list of starting locations on the map -> each robot will be assignned their assignment point at the start of the simulation - filling from the left
         startingLocations = [(1,4),(1,5),(1,6),(1,7) , (3,10),(4,10),(5,10),(6,10),(7,10)]
