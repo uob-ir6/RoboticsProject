@@ -12,8 +12,51 @@ import random
 
 
 class WaiterRobotsNode(object):
+    
+    def printMap(self):
+        print("printing map...")
+        map = self.map
+        for i in range(0,len(map)):
+            for j in range(0,len(map[i])):
+                print(map[i][j], end = '')
+                print('|', end = '')
+            print()
+
+        
+
+    def initialiseMapAndRobots(self):
+        print("initialising map and robots...")
+        # initialise n*m map with the tables locations T and the kitchen location K 
+        self.map = [ ['x','x','x','x','x','x','x','x','x','x','x','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ','T',' ',' ',' ','T',' ',' ',' ','T','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ','T',' ',' ',' ','T',' ',' ',' ',' ','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ',' ',' ',' ',' ',' ',' ',' ',' ',' ','x'],
+                     ['x',' ','T',' ',' ',' ',' ',' ',' ','K','K','x'],
+                     ['x','x','x','x','x','x','x','x','x','x','x','x'] ]
+                     
+        # set list of starting locations on the map
+        startingLocations = [(1,1)]
+
+        # initialise robots with their robot id and their pose (x,y,theta) and their state (idle, serving, delivering), their positional state location <x,y> assignment point <x,y>
+        
+
+
     def __init__(self):
+        self.map = []
+        self.robots = []
+
         print("Hello World")
+        self.printMap()
+        self.initialiseMapAndRobots()
+        self.printMap()
+
+
 
 
 
@@ -57,7 +100,8 @@ class WaiterRobotsNode(object):
         # send order message to waiter robot system
 
 
-        
+
+
 
 
 
