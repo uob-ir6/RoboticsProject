@@ -9,7 +9,7 @@
 ```
 chmod +x node.py
 ```
-this makes the file executable 
+this makes the file executable <br />
 4) in catkin_ws run
 ``` 
 catkin_make
