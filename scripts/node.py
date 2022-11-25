@@ -38,7 +38,7 @@ class WaiterRobotsNode(object):
 
         print(self.robots)
 
-        self.pathPlanning()
+        self.pathPlanning(self.robots[0])
 
         # self.orderModel(6)
     
@@ -80,7 +80,7 @@ class WaiterRobotsNode(object):
 
         # initialise robots with their robot id and their pose (x,y,theta) and their state (), their positional state location <x,y> assignment point <x,y>
         for i in range (0, numberOfRobot):
-            robotId = i+1
+            robotId = i
             pose = startingLocations[i]
             state = 'idle'
             location = startingLocations[i]
@@ -134,7 +134,7 @@ class WaiterRobotsNode(object):
 
 
 
-    def pathPlanning(self, a = 1, b = 1):
+    def pathPlanning(self,robot, b = (10,10)): # TODO remove default values - just for testing
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
 
@@ -184,17 +184,35 @@ class WaiterRobotsNode(object):
         print(actions[4][6])
 
 
-        # define rewards
+        # define rewards TODO kinda want to store this with the robot or atleast the policy/goal state
 
         # TODO 
+        rewards = []
         # new array n*n give a reward for each state -0.1 for each step
+        for i in range (0, len(self.pathStates)):
+            rewardsRow = []
+            for j in range (0, len(self.pathStates[i])):
+                rewardsRow.append(-0.1)
+            rewards.append(rewardsRow)
+        print(rewards)
 
-        
 
         # give a reward of 1 for reaching the goal state
+        rewards[b[1]][b[0]] = 1
         # for each path in the active paths that is not your own, follow the path applying negative reward for each step -1
-        # for each robot apply a negative reward for their current location -1 
-        
+
+        # TODO figure out form of the policy so that we can store the active path
+        # for each robot apply a negative reward for their current location -1, except for the current robot
+
+        for i in range (0, len(self.robots)):  
+            if i != robot.id:
+                print("robot: ", i,"is at location: ", self.robots[i].location)
+                rewards[self.robots[i].location[1]][self.robots[i].location[0]] = -1
+         
+        #print(rewards nicely)
+        for i in range (0, len(rewards)):
+            print(rewards[i])
+
 
 
 
