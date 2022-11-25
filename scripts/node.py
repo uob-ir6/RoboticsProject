@@ -23,6 +23,7 @@ class WaiterRobotsNode(object):
         self.robots = []
         self.tableLocations = []
         self.activePaths = []
+        self.pathStates = []
 
         # path planning mdp model parameters
     
@@ -34,6 +35,8 @@ class WaiterRobotsNode(object):
         self.printMap()
 
         print(self.robots)
+
+        self.pathPlanning()
 
         # self.orderModel(6)
     
@@ -129,15 +132,65 @@ class WaiterRobotsNode(object):
 
 
 
-    def pathPlanning(self, a, b):
+    def pathPlanning(self, a = 1, b = 1):
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
-        
+
         # define states - we can 
-        self.states = self.map
+        self.pathStates = self.map
         # define actions
+
+        # for each state is their an obstacle above, below, left, right, we define the actions for a state as a 4-tuple of the possible actions 
+        # (a,b,c,d) where a = up, b = down, c = left, d = right
+
+        actions = []
+        for i in range (0, len(self.pathStates)):
+            actionsRow = []
+            for j in range (0, len(self.pathStates[i])):
+                # check if state is an obstacle if so there is no actions 
+                if self.pathStates[i][j] != ' ':
+                    actionsRow.append((False,False,False,False))
+                    continue
+
+                left = True
+                right = True
+                up = True
+                down = True
+
+                # check if there is an obstacle to the left
+                if j-1 >= 0:
+                    if self.pathStates[i][j-1] != ' ':
+                        left = False
+                # check if there is an obstacle to the right
+                if j+1 < len(self.pathStates[j]):
+                    if self.pathStates[i][j+1] != ' ':
+                        right = False
+                # check if there is an obstacle above
+                if i+1 < len(self.pathStates[i]):
+                    if self.pathStates[i+1][j] != ' ':
+                        up = False
+                # check if there is an obstacle below
+                if i-1 >= 0:
+                    if self.pathStates[i-1][j] != ' ':
+                        down = False
+                
+                actionsRow.append((up,down,left,right))
+
+                
+            actions.append(actionsRow)
+        print(self.pathStates[8])
+        print(actions[4][6])
+
+
         # define rewards
         # define transition model
+
+        # this ones a bit more complicated, we need to initialise a shared transition model which itslef is a 4d array
+        # for each state and action, there is a probabilty to move to each of the other states
+        # the transition model is a 4d array of the form [state][action][state][probability]
+
+        # therefore we need an action array [up, down, left, right] = ()) 
+
         # calculate optimal policy
         # return optimal policy
         pass
