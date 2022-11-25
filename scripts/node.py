@@ -23,6 +23,9 @@ class WaiterRobotsNode(object):
         self.robots = []
         self.tableLocations = []
         self.activePaths = []
+
+        # path planning mdp model parameters
+    
         
         
         
@@ -126,7 +129,18 @@ class WaiterRobotsNode(object):
 
 
 
-
+    def pathPlanning(self, a, b):
+        # a = (x,y) b = (x,y)
+        # calculate the best path between the two points 
+        
+        # define states - we can 
+        self.states = self.map
+        # define actions
+        # define rewards
+        # define transition model
+        # calculate optimal policy
+        # return optimal policy
+        pass
 
 
 
