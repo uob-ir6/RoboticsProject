@@ -9,6 +9,7 @@ pf.PFLocaliser() to do the localisation.
 import rospy
 import random
 import numpy as np
+import time
 
 from robot import Robot
 
@@ -23,10 +24,11 @@ class WaiterRobotsNode(object):
         self.robots = []
         self.tableLocations = []
         self.activePaths = []
-        self.pathStates = []
-
+        
         # path planning mdp model parameters
-    
+        self.pathStates = []
+        self.actions = []
+
         
         
         
@@ -149,7 +151,7 @@ class WaiterRobotsNode(object):
             for j in range (0, len(self.pathStates[i])):
                 # check if state is an obstacle if so there is no actions 
                 if self.pathStates[i][j] != ' ':
-                    actionsRow.append((False,False,False,False))
+                    actionsRow.append([False,False,False,False])
                     continue
 
                 left = True
@@ -174,7 +176,7 @@ class WaiterRobotsNode(object):
                     if self.pathStates[i-1][j] != ' ':
                         down = False
                 
-                actionsRow.append((up,down,left,right))
+                actionsRow.append([up,down,left,right])
 
                 
             actions.append(actionsRow)
@@ -189,7 +191,56 @@ class WaiterRobotsNode(object):
         # for each state and action, there is a probabilty to move to each of the other states
         # the transition model is a 4d array of the form [state][action][state][probability]
 
-        # therefore we need an action array [up, down, left, right] = ()) 
+        # therefore we need an action array [up, down, left, right] = ()
+
+        # start timer
+        start = time.time()
+
+        emptyTransitionModel = []
+        for i in range (0, len(self.pathStates)):
+            emptyTransitionModelRow = [0] * (len(self.pathStates[i]))
+            emptyTransitionModel.append(emptyTransitionModelRow)
+
+        transitionModel = []
+
+        for i in range (0, len(self.pathStates)):
+            transitionModelRow = []
+            for j in range (0, len(self.pathStates[i])):
+                #for each action
+                transitionModelActionModels = [] 
+                for k in range (0, len(actions[i][j])):
+                    #set the initial probabilities to 0 except for the expected state
+                    
+                    possibleTransitions = np.copy(emptyTransitionModel)
+                    if (actions[i][j][k]):
+                        if(k == 0 ):
+                            # up
+                            if (i+1 < len(self.pathStates[i])):
+                                possibleTransitions[i+1][j] = 1
+                        elif(k == 1):
+                            # down
+                            if (i-1 >= 0):
+                                possibleTransitions[i-1][j] = 1
+                        elif(k == 2):
+                            # left
+                            if (j-1 >= 0):
+                                possibleTransitions[i][j-1] = 1
+                        elif(k == 3):
+                            # right
+                            if (j+1 < len(self.pathStates[j])):
+                                possibleTransitions[i][j+1] = 1
+                    transitionModelActionModels.append(possibleTransitions)
+                    # possibleTransitions[i][j] = '9' I use this to show current state whilst debugging
+                    # if (i == 6 and j == 6):
+                    #     print("for state ", i, j, " action ", actions[i][j], "at : ",k, " possible transitions are \n", possibleTransitions)
+                transitionModelRow.append(transitionModelActionModels)
+            transitionModel.append(transitionModelRow)
+
+        #end timer
+        end = time.time()
+        print("time taken to generate transition model: ", end - start)
+
+                        
 
         # calculate optimal policy
         # return optimal policy
