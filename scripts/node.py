@@ -28,7 +28,7 @@ class WaiterRobotsNode(object):
         # path planning mdp model parameters
         self.pathStates = []
         self.actions = []
-
+        self.transitionModel = []
         
         
         
@@ -185,6 +185,19 @@ class WaiterRobotsNode(object):
 
 
         # define rewards
+
+        # TODO 
+        # new array n*n give a reward for each state -0.1 for each step
+
+        
+
+        # give a reward of 1 for reaching the goal state
+        # for each path in the active paths that is not your own, follow the path applying negative reward for each step -1
+        # for each robot apply a negative reward for their current location -1 
+        
+
+
+
         # define transition model
 
         # this ones a bit more complicated, we need to initialise a shared transition model which itslef is a 4d array
@@ -201,7 +214,7 @@ class WaiterRobotsNode(object):
             emptyTransitionModelRow = [0] * (len(self.pathStates[i]))
             emptyTransitionModel.append(emptyTransitionModelRow)
 
-        transitionModel = []
+        self.transitionModel = []
 
         for i in range (0, len(self.pathStates)):
             transitionModelRow = []
@@ -234,7 +247,7 @@ class WaiterRobotsNode(object):
                     # if (i == 6 and j == 6):
                     #     print("for state ", i, j, " action ", actions[i][j], "at : ",k, " possible transitions are \n", possibleTransitions)
                 transitionModelRow.append(transitionModelActionModels)
-            transitionModel.append(transitionModelRow)
+            self.transitionModel.append(transitionModelRow)
 
         #end timer
         end = time.time()
