@@ -375,10 +375,40 @@ class WaiterRobotsNode(object):
         # update utilities based on neighbours
         # repeat until convergence
 
+        #give utilities caluclate the policy
+        policy = []
+        currentState = (robot.location[0], robot.location[1])
+        while (currentState != b or len(policy) > 20):
+            # for each action find the action that maximises the utility
 
-        
+
+            maxAction = -1
+            maxUtility = -1
+            for k in range (0, len(self.actions[currentState[1]][currentState[0]])):
+                # for each action find the utility
+                # sum of transition_model(state,action) * utility_policy(state)
+                sum = 0
+                for l in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k])):
+                    for m in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][l])):
+                        sum += self.transitionModel[currentState[1]][currentState[0]][k][l][m] * utilities[l][m]
+                if (sum > maxUtility):
+                    maxUtility = sum
+                    maxAction = k
+            # update the policy
+            policy.append(maxAction)
+            # update the current state
+            if (maxAction == 0):
+                currentState = (currentState[0], currentState[1] + 1)
+            elif (maxAction == 1):
+                currentState = (currentState[0], currentState[1] - 1)
+            elif (maxAction == 2):
+                currentState = (currentState[0] - 1, currentState[1])
+            elif (maxAction == 3):
+                currentState = (currentState[0] + 1, currentState[1])
 
 
+
+        print("policy for location: ", robot.location, " is: ", policy)
         # return optimal policy
         pass
 
