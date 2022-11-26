@@ -314,6 +314,68 @@ class WaiterRobotsNode(object):
         # policy*(state) = argmax_action sum of transition_model(state,action) * utility_policy(state)
         # utility_policy(state) = reward(state) + gamma * max_action(sum of transition_model(state,action) * utility_policy(state))
 
+
+        gamma = 0.9
+
+        start = time.time()
+        # start with abritrary utitlies
+        utilities = []
+        for i in range (0, len(self.pathStates)):
+            utilitiesRow = []
+            for j in range (0, len(self.pathStates[i])):
+                utilitiesRow.append(0)# abs(np.random.normal(0,0.1)))
+            utilities.append(utilitiesRow)
+
+        end = time.time()
+        print("time taken to generate utilities: ", end - start)
+
+        # print(utilities nicely)
+        for i in range (0, len(utilities)):
+            print(utilities[i])
+
+        
+        start = time.time()
+
+        converged = False
+        #for now we will just do 100 iterations
+        conv = 0
+        while (not converged) :
+
+            #for each state calculate the updated utility
+            for i in range (0, len(self.pathStates)):
+                for j in range (0, len(self.pathStates[i])):
+                    # for each action find the action that maximises the utility
+
+                    maxAction = -1
+                    maxUtility = -1
+                    for k in range (0, len(self.actions[i][j])):
+                        # for each action find the utility
+                        # sum of transition_model(state,action) * utility_policy(state)
+                        sum = 0
+                        for l in range (0, len(self.transitionModel[i][j][k])):
+                            for m in range (0, len(self.transitionModel[i][j][k][l])):
+                                sum += self.transitionModel[i][j][k][l][m] * utilities[l][m]
+                        if (sum > maxUtility):
+                            maxUtility = sum
+                            maxAction = k
+                    # update the utility
+                    utilities[i][j] = self.getReward(rewards, (j,i)) + gamma * maxUtility
+
+            conv = conv + 1
+            if (conv > 50):
+                converged = True
+        
+        # print(utilities nicely)
+        for i in range (0, len(utilities)):
+            print(utilities[i])
+
+        end = time.time()
+        print("time taken to calculate utilities: ", end - start)
+        #set utilites array to 0 with noise
+        # update utilities based on neighbours
+        # repeat until convergence
+
+
         
 
 
