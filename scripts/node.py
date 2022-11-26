@@ -32,12 +32,14 @@ class WaiterRobotsNode(object):
         
         
         
-        
+        # initialise map and robots
         self.initialiseMapAndRobots(2)
         self.printMap()
 
         print(self.robots)
 
+        #initialise path planning mdp model
+        self.initialsiePathPlanningMDP()
         self.pathPlanning(self.robots[0])
 
         # self.orderModel(6)
@@ -132,20 +134,18 @@ class WaiterRobotsNode(object):
             
         # send order message to waiter robot system
 
-
-
-    def pathPlanning(self,robot, b = (10,10)): # TODO remove default values - just for testing
-        # a = (x,y) b = (x,y)
-        # calculate the best path between the two points 
-
+    def initialsiePathPlanningMDP(self):
+        # initialise path planning mdp model parameters
+        
         # define states - we can 
         self.pathStates = self.map
-        # define actions
+
+           # define actions
 
         # for each state is their an obstacle above, below, left, right, we define the actions for a state as a 4-tuple of the possible actions 
         # (a,b,c,d) where a = up, b = down, c = left, d = right
 
-        actions = []
+        self.actions = []
         for i in range (0, len(self.pathStates)):
             actionsRow = []
             for j in range (0, len(self.pathStates[i])):
@@ -179,9 +179,95 @@ class WaiterRobotsNode(object):
                 actionsRow.append([up,down,left,right])
 
                 
-            actions.append(actionsRow)
+            self.actions.append(actionsRow)
         print(self.pathStates[8])
-        print(actions[4][6])
+        print(self.actions[4][6])
+
+
+        # define transition model
+
+        # this ones a bit more complicated, we need to initialise a shared transition model which itslef is a 4d array
+        # for each state and action, there is a probabilty to move to each of the other states
+        # the transition model is a 4d array of the form [state][action][state][probability]
+
+        # therefore we need an action array [up, down, left, right] = ()
+
+        # start timer
+        start = time.time()
+
+        emptyTransitionModel = []
+        for i in range (0, len(self.pathStates)):
+            emptyTransitionModelRow = [0] * (len(self.pathStates[i]))
+            emptyTransitionModel.append(emptyTransitionModelRow)
+
+        self.transitionModel = []
+
+        for i in range (0, len(self.pathStates)):
+            transitionModelRow = []
+            for j in range (0, len(self.pathStates[i])):
+                #for each action
+                transitionModelActionModels = [] 
+                for k in range (0, len(self.actions[i][j])):
+                    #set the initial probabilities to 0 except for the expected state
+                    
+                    possibleTransitions = np.copy(emptyTransitionModel)
+                    if (self.actions[i][j][k]):
+                        if(k == 0 ):
+                            # up
+                            if (i+1 < len(self.pathStates[i])):
+                                possibleTransitions[i+1][j] = 1
+                        elif(k == 1):
+                            # down
+                            if (i-1 >= 0):
+                                possibleTransitions[i-1][j] = 1
+                        elif(k == 2):
+                            # left
+                            if (j-1 >= 0):
+                                possibleTransitions[i][j-1] = 1
+                        elif(k == 3):
+                            # right
+                            if (j+1 < len(self.pathStates[j])):
+                                possibleTransitions[i][j+1] = 1
+                    transitionModelActionModels.append(possibleTransitions)
+                    # possibleTransitions[i][j] = '9' I use this to show current state whilst debugging
+                    # if (i == 6 and j == 6):
+                    #     print("for state ", i, j, " action ", actions[i][j], "at : ",k, " possible transitions are \n", possibleTransitions)
+                transitionModelRow.append(transitionModelActionModels)
+            self.transitionModel.append(transitionModelRow)
+
+        #end timer
+        end = time.time()
+        print("time taken to generate transition model: ", end - start)
+
+# define some helper functions for the path planning mdp 
+# get the reward for a state
+    def getReward(self, rewardModel, state):
+        #state = (x,y)
+        return rewardModel[state[1]][state[0]]
+    
+    def getActions(self, state):
+        #state = (x,y)
+        return self.actions[state[1]][state[0]]
+    def getTransitionProbabity(self, state, action, nextState):
+        #state = (x,y)
+        #nextState = (x,y)
+        # action = (up = 0, down = 1, left = 2, right = 3)
+        #sum up the values in the transition 
+        sum = 0
+        for i in range (0, len(self.transitionModel[state[1]][state[0]][action])):
+            for j in range (0, len(self.transitionModel[state[1]][state[0]][action][i])):
+                sum += self.transitionModel[state[1]][state[0]][action][i][j]
+        print("sum: ", sum)
+
+        #calculate the probability
+        return self.transitionModel[state[1]][state[0]][action][nextState[1]][nextState[0]] / sum
+
+    def pathPlanning(self,robot, b = (10,10)): # TODO remove default values - just for testing
+        # a = (x,y) b = (x,y)
+        # calculate the best path between the two points 
+
+      
+     
 
 
         # define rewards TODO kinda want to store this with the robot or atleast the policy/goal state
@@ -215,65 +301,22 @@ class WaiterRobotsNode(object):
 
 
 
-
-        # define transition model
-
-        # this ones a bit more complicated, we need to initialise a shared transition model which itslef is a 4d array
-        # for each state and action, there is a probabilty to move to each of the other states
-        # the transition model is a 4d array of the form [state][action][state][probability]
-
-        # therefore we need an action array [up, down, left, right] = ()
-
-        # start timer
-        start = time.time()
-
-        emptyTransitionModel = []
-        for i in range (0, len(self.pathStates)):
-            emptyTransitionModelRow = [0] * (len(self.pathStates[i]))
-            emptyTransitionModel.append(emptyTransitionModelRow)
-
-        self.transitionModel = []
-
-        for i in range (0, len(self.pathStates)):
-            transitionModelRow = []
-            for j in range (0, len(self.pathStates[i])):
-                #for each action
-                transitionModelActionModels = [] 
-                for k in range (0, len(actions[i][j])):
-                    #set the initial probabilities to 0 except for the expected state
-                    
-                    possibleTransitions = np.copy(emptyTransitionModel)
-                    if (actions[i][j][k]):
-                        if(k == 0 ):
-                            # up
-                            if (i+1 < len(self.pathStates[i])):
-                                possibleTransitions[i+1][j] = 1
-                        elif(k == 1):
-                            # down
-                            if (i-1 >= 0):
-                                possibleTransitions[i-1][j] = 1
-                        elif(k == 2):
-                            # left
-                            if (j-1 >= 0):
-                                possibleTransitions[i][j-1] = 1
-                        elif(k == 3):
-                            # right
-                            if (j+1 < len(self.pathStates[j])):
-                                possibleTransitions[i][j+1] = 1
-                    transitionModelActionModels.append(possibleTransitions)
-                    # possibleTransitions[i][j] = '9' I use this to show current state whilst debugging
-                    # if (i == 6 and j == 6):
-                    #     print("for state ", i, j, " action ", actions[i][j], "at : ",k, " possible transitions are \n", possibleTransitions)
-                transitionModelRow.append(transitionModelActionModels)
-            self.transitionModel.append(transitionModelRow)
-
-        #end timer
-        end = time.time()
-        print("time taken to generate transition model: ", end - start)
-
-                        
+        
+        print("reward: ", self.getReward(rewards, (5,1)))
+        print("transition probability: ", self.getTransitionProbabity((5,1), 0, (5,2)))          
 
         # calculate optimal policy
+
+        # algorthm for value iteration
+
+        # policy* = argmax_policy expected reward of policy
+        # utility_policy(state) = expected reward of policy starting from state with discount factor gamma
+        # policy*(state) = argmax_action sum of transition_model(state,action) * utility_policy(state)
+        # utility_policy(state) = reward(state) + gamma * max_action(sum of transition_model(state,action) * utility_policy(state))
+
+        
+
+
         # return optimal policy
         pass
 
