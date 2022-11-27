@@ -262,7 +262,7 @@ class WaiterRobotsNode(object):
         #calculate the probability
         return self.transitionModel[state[1]][state[0]][action][nextState[1]][nextState[0]] / sum
 
-    def pathPlanning(self,robot, b = (10,10)): # TODO remove default values - just for testing
+    def pathPlanning(self,robot, b = (1,6)): # TODO remove default values - just for testing
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
 
@@ -339,7 +339,10 @@ class WaiterRobotsNode(object):
         converged = False
         #for now we will just do 100 iterations
         conv = 0
-        while (not converged) :
+        maxChange =1
+        while ((not converged) and (maxChange > 0.01)) :
+
+            maxChange = 0
 
             #for each state calculate the updated utility
             for i in range (0, len(self.pathStates)):
@@ -359,15 +362,17 @@ class WaiterRobotsNode(object):
                             maxUtility = sum
                             maxAction = k
                     # update the utility
+                    previousUtility = utilities[i][j]
                     utilities[i][j] = self.getReward(rewards, (j,i)) + gamma * maxUtility
+                    if (abs(previousUtility - utilities[i][j]) > maxChange):
+                        maxChange = abs(previousUtility - utilities[i][j])
 
             conv = conv + 1
+            print("i: ", conv ,": max change: ", maxChange)
             if (conv > 50):
                 converged = True
         
-        # print(utilities nicely)
-        for i in range (0, len(utilities)):
-            print(utilities[i])
+
 
         end = time.time()
         print("time taken to calculate utilities: ", end - start)
@@ -378,7 +383,7 @@ class WaiterRobotsNode(object):
         #give utilities caluclate the policy
         policy = []
         currentState = (robot.location[0], robot.location[1])
-        while (currentState != b or len(policy) > 20):
+        while (currentState != b and len(policy) < 20):
             # for each action find the action that maximises the utility
 
 
@@ -410,6 +415,11 @@ class WaiterRobotsNode(object):
 
         print("policy for location: ", robot.location, " is: ", policy)
         # return optimal policy
+
+        # to store the path chosen we need to store the policy and the robot following it 
+        # ((robot), y[]), where x is the initial state and y is the policy
+        # then when the robot moves we update the policy to remove the first action and if necessary recalculate the policy from the utility
+        # therefore the robot will need to store the current utility its following  
         pass
 
 
