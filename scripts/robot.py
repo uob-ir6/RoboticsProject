@@ -12,7 +12,11 @@ class Robot(object):
         self.location = location
         self.assignmentPoint = assignmentPoint
 
-        odom_Sub = rospy.Subscriber("odom", Odometry, self.odomCallback)
+        
+
+        robot_prefix = "robot_"+str(self.id)
+        odom_Sub = rospy.Subscriber(robot_prefix+"/odom", Odometry, self.odomCallback)
+
         
         time.sleep(3)
        
@@ -38,8 +42,8 @@ class Robot(object):
         
 
 
-        # pub = rospy.Publisher("robot_"+str(self.id)+'/cmd_vel', Twist, queue_size=100)
-        pub = rospy.Publisher("cmd_vel", Twist, queue_size=100)
+        pub = rospy.Publisher("robot_"+str(self.id)+'/cmd_vel', Twist, queue_size=100)
+        # pub = rospy.Publisher("cmd_vel", Twist, queue_size=100)
 
         # rospy.init_node('motion_model', anonymous=True)
         

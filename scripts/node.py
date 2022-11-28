@@ -10,7 +10,7 @@ import rospy
 import random
 import numpy as np
 import time
-
+from geometry_msgs.msg import Pose
 from robot import Robot
 
 
@@ -105,8 +105,9 @@ class WaiterRobotsNode(object):
 
         # initialise robots with their robot id and their pose (x,y,theta) and their state (), their positional state location <x,y> assignment point <x,y>
         for i in range (0, numberOfRobot):
+            robotsPose = Pose()
             robotId = i
-            pose = startingLocations[i]
+            pose = robotsPose
             state = 'idle'
             location = startingLocations[i]
             assignmentPoint = tableLocations[i]
