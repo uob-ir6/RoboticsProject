@@ -38,12 +38,35 @@ class WaiterRobotsNode(object):
 
         print(self.robots)
 
-        #initialise path planning mdp model
-        self.initialsiePathPlanningMDP()
-        self.pathPlanning(self.robots[0])
+        self.robots[0].motion()
+
+        # #initialise path planning mdp model
+        # self.initialsiePathPlanningMDP()
+        # self.pathPlanning(self.robots[0], (1,6))
+
+        
+
 
         # self.orderModel(6)
     
+
+    def orderAttrution(self):
+        # recieve an order/ get the next order from the queue
+        # 
+
+        # go throught all the robots and calculate the paths 
+
+        # assign the order to the robot with the shortest path
+
+        # tell the robot to move to the follow the path and update its state
+
+        # add the path to the active paths list
+
+        # 
+        pass
+        # 
+
+
     def printMap(self):
         print("printing map...")
         map = self.map
@@ -105,6 +128,8 @@ class WaiterRobotsNode(object):
         HIGH = 1 # every factor of 1
         MEDIUM = 2 # every factor of 2
         LOW = 3 # every factor of 3
+
+        #TODO set timeout between tables
 
         while True:
 
@@ -262,7 +287,7 @@ class WaiterRobotsNode(object):
         #calculate the probability
         return self.transitionModel[state[1]][state[0]][action][nextState[1]][nextState[0]] / sum
 
-    def pathPlanning(self,robot, b = (1,6)): # TODO remove default values - just for testing
+    def pathPlanning(self,robot, b ): # TODO remove default values - just for testing
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
 
@@ -288,6 +313,9 @@ class WaiterRobotsNode(object):
         # for each path in the active paths that is not your own, follow the path applying negative reward for each step -1
 
         # TODO figure out form of the policy so that we can store the active path
+
+
+
         # for each robot apply a negative reward for their current location -1, except for the current robot
 
         for i in range (0, len(self.robots)):  
@@ -417,7 +445,7 @@ class WaiterRobotsNode(object):
         # return optimal policy
 
         # to store the path chosen we need to store the policy and the robot following it 
-        # ((robot), y[]), where x is the initial state and y is the policy
+        # ((robot,(x,y)), y[]), where x is the initial state and y is the policy
         # then when the robot moves we update the policy to remove the first action and if necessary recalculate the policy from the utility
         # therefore the robot will need to store the current utility its following  
         pass
