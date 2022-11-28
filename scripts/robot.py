@@ -15,6 +15,7 @@ class Robot(object):
         
 
         robot_prefix = "robot_"+str(self.id)
+        # robot_prefix = ""
         odom_Sub = rospy.Subscriber(robot_prefix+"/odom", Odometry, self.odomCallback)
 
         
@@ -41,14 +42,17 @@ class Robot(object):
 
         
 
-
-        pub = rospy.Publisher("robot_"+str(self.id)+'/cmd_vel', Twist, queue_size=100)
+        robot_prefix = "robot_"+str(self.id)
+        # robot_prefix = ""
+        pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=100)
         # pub = rospy.Publisher("cmd_vel", Twist, queue_size=100)
 
         # rospy.init_node('motion_model', anonymous=True)
         
         # moveForwardOneSquare(pub)
-        rotate(self, pub, 3)
+        # rotate(self, pub, 3)
+        rotate(self, pub, 2)
+        moveForwardOneSquare(self, pub)
 
         # # (0,1,2,3) where 0 is up, 1 is down, 2 is left, 3 is right
         # if action == 0 : 
@@ -72,13 +76,31 @@ class Robot(object):
         # publish the new pose
         pass
 
-def moveForwardOneSquare (pub):
+def moveForwardOneSquare (self, pub):
+    #each square is 1 meter
+
+    # get current position 
+    
+    currentPose = (self.pose.position.x, self.pose.position.y)
+    previousPose = currentPose
+
+    xdif = 0
+    ydif = 0
+    
     i =0
     rate = rospy.Rate(10) # 10hz
-    while i < 30:
+    threshold = 0.1
+    cellSize = 2
+    while (xdif < (cellSize - threshold) and ydif  < (cellSize - threshold)):
             base_data = Twist()
             base_data.linear.x = 1
             pub.publish( base_data )
+            # update current position
+            currentPose = (self.pose.position.x, self.pose.position.y)
+            # calculate difference between current position and previous position
+            xdif = abs(currentPose[0] - previousPose[0])
+            ydif = abs(currentPose[1] - previousPose[1])
+
             rate.sleep()
             i+= 1
     # move forward one square

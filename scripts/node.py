@@ -12,7 +12,8 @@ import numpy as np
 import time
 from geometry_msgs.msg import Pose
 from robot import Robot
-
+import sys
+from nav_msgs.msg import OccupancyGrid, Odometry
 
 
 
@@ -29,6 +30,19 @@ class WaiterRobotsNode(object):
         self.pathStates = []
         self.actions = []
         self.transitionModel = []
+
+        rospy.loginfo("Waiting for a map...")
+        try:
+            ocuccupancy_map = rospy.wait_for_message("/map", OccupancyGrid, 20)
+        except:
+            rospy.logerr("Problem getting a map. Check that you have a map_server"
+                     " running: rosrun map_server map_server <mapname> " )
+            sys.exit(1)
+        rospy.loginfo("Map received. %d X %d, %f px/m." %
+                      (ocuccupancy_map.info.width, ocuccupancy_map.info.height,
+                       ocuccupancy_map.info.resolution))
+
+
         
         
         
