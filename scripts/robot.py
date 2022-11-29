@@ -101,6 +101,7 @@ class Robot(object):
             #  if policy state is the same as the state then update the policy removing from the end 
             else:
                 policy.pop(0)
+                self.activePaths[0].pop(0)
        
 
 
