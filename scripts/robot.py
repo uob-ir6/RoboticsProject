@@ -1,17 +1,25 @@
 
 from geometry_msgs.msg import Twist
+
+from geometry_msgs.msg import Transform
+from geometry_msgs.msg import TransformStamped
+from tf.msg import tfMessage
+from tf import transformations
 import rospy
 import time
 from nav_msgs.msg import Odometry
+import numpy as np
 
 class Robot(object):
     def __init__(self, robotId, pose, state, location, assignmentPoint):
         self.id = robotId
         self.pose = pose
-        self.state = state
+        self.states = state
+        # states include = "kitchen" "table" "demand-rate" "assignment-point" "order-attribution"
+        self.activePaths = [] # array of (policies, utility) mappings
         self.location = location
         self.assignmentPoint = assignmentPoint
-
+        self.tf_message = tfMessage()
         
 
         robot_prefix = "robot_"+str(self.id)
@@ -34,47 +42,68 @@ class Robot(object):
         
         
 
-    def motion (self) : # pose, action):
-        # (x,y,theta)
-        # 
+    def motion (self, path,goalStates) :
+        #path is (policy, utility) mapping
 
-        # 0 thatn up 90
+        policy = path[0]
+        utility = path[1]
+
+
+        
 
         
 
         robot_prefix = "robot_"+str(self.id)
         # robot_prefix = ""
         pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=100)
-        # pub = rospy.Publisher("cmd_vel", Twist, queue_size=100)
-
-        # rospy.init_node('motion_model', anonymous=True)
-        
-        # moveForwardOneSquare(pub)
-        # rotate(self, pub, 3)
-        rotate(self, pub, 2)
-        moveForwardOneSquare(self, pub)
-
-        # # (0,1,2,3) where 0 is up, 1 is down, 2 is left, 3 is right
-        # if action == 0 : 
-        #     expectedTheta = 0
-        # elif action == 1:
-        #     expectedTheta = 180
-        # elif action == 2:
-        #     expectedTheta = 90
-        # elif action == 3:
-        #     expectedTheta = 270
-        #     # point robot up
-        #     # move robot 1 grid unit up
 
 
-    def execute(thetaAmount, forwardAmount):
-        # execute the action
-        # update the pose
-        # update the state
-        # update the location
-        # update the assignment point
-        # publish the new pose
-        pass
+        # takes in a policy and executes it
+
+
+        # for each action in the policy 0, 1, 2 ,3 = up, down, left, right
+        print("executing policy: ", policy)
+        while len(policy) > 0:
+            # previouse location
+            prevLocation = self.location
+
+
+            #   execute the action
+            print("executing action: ", policy[0])
+            rotate(self,pub,policy[0])
+            moveForwardOneSquare(self,pub)
+
+            #  update the pose give action and location
+            # TODO localistion
+
+            # set the expected location
+            expectedLocation = [prevLocation[0], prevLocation[1]]
+            if policy[0] == 0:
+                expectedLocation[1] += 1
+            elif policy[0]  == 1:
+                expectedLocation[1] -= 1
+            elif policy[0]  == 2:
+                expectedLocation[0] -= 1
+            elif policy[0]  == 3:
+                expectedLocation[0] += 1
+
+            # TODO for now just set the location to the expected location
+            self.location = expectedLocation
+
+            #  update policy if the state is not the same as the policy state
+            if self.location != expectedLocation:
+                # update policy based on utility
+                from node import WaiterRobotsNode
+                super(WaiterRobotsNode, self).updatePolicy(utility, self.location, goalStates) # TODO goal states
+                pass
+
+
+            #  if policy state is the same as the state then update the policy removing from the end 
+            else:
+                policy.pop(0)
+       
+
+
 
 def moveForwardOneSquare (self, pub):
     #each square is 1 meter
@@ -104,6 +133,9 @@ def moveForwardOneSquare (self, pub):
             rate.sleep()
             i+= 1
     # move forward one square
+     # after movement is complete, recalculate transform 
+    currentTime = rospy.Time.now()
+    recalculateTransform(self, currentTime)
 
 def rotate (self, pub, direction ):
     # get current pose 
@@ -129,8 +161,7 @@ def rotate (self, pub, direction ):
 
 
     currentOrientation = (self.pose.orientation.z, self.pose.orientation.w)
-    
-    
+  
 
 
     # determine wwhich direction to rotate 
@@ -156,3 +187,50 @@ def rotate (self, pub, direction ):
             wdif = abs(currentOrientation[1] - targetDirection[1])
             rate.sleep()
             i+= 1
+    
+    # after movement is complete, recalculate transform 
+    currentTime = rospy.Time.now()
+    recalculateTransform(self, currentTime)
+
+
+def recalculateTransform  (self,currentTime):
+    """
+    Creates updated transform from /odom to /map given recent odometry and
+    laser data.
+    
+    :Args:
+        | currentTime (rospy.Time()): Time stamp for this update
+        """
+    
+
+
+    transform = Transform()
+    t_est = transformations.quaternion_matrix([self.pose.orientation.x, self.pose.orientation.y, self.pose.orientation.z, self.pose.orientation.w])
+    t_est[0,3] = self.pose.position.x
+    t_est[1,3] = self.pose.position.y
+    t_est[2,3] = self.pose.position.z
+
+    t_odom = transformations.quaternion_matrix([self.pose.orientation.x, self.pose.orientation.y, self.pose.orientation.z, self.pose.orientation.w])
+    t_odom[0,3] = self.pose.position.x
+    t_odom[1,3] = self.pose.position.y
+    t_odom[2,3] = self.pose.position.z
+    T = np.dot(t_odom, np.linalg.inv(t_odom))
+    q = transformations.quaternion_from_matrix(T) 
+
+    transform.translation.x = T[0,3]
+    transform.translation.y = T[1,3]
+    transform.translation.z = T[2,3]
+    transform.rotation.x = q[0]
+    transform.rotation.y = q[1]
+    transform.rotation.z = q[2]
+    transform.rotation.w = q[3]
+
+    new_tfstamped = TransformStamped()
+    
+    prefix = "robot_"+str(self.id)
+    new_tfstamped.child_frame_id = prefix + "odom"
+    new_tfstamped.header.frame_id = "base_link"
+    new_tfstamped.header.stamp = currentTime
+    new_tfstamped.transform = transform
+
+    self.tf_message = tfMessage(transforms = [new_tfstamped])

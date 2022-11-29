@@ -14,6 +14,7 @@ from geometry_msgs.msg import Pose
 from robot import Robot
 import sys
 from nav_msgs.msg import OccupancyGrid, Odometry
+from std_msgs.msg import String
 
 
 
@@ -47,37 +48,39 @@ class WaiterRobotsNode(object):
         
         
         # initialise map and robots
+
+       
         self.initialiseMapAndRobots(2)
-        self.printMap()
 
-        print(self.robots)
 
-        self.robots[0].motion()
+        # # start order attributiob subscriber 
+        # rospy.Subscriber("/order", String, self.orderAttribution)
+        
+        # self.printMap()
 
-        # #initialise path planning mdp model
+        # print(self.robots)
+
+        # self.robots[0].motion()
+
+        #initialise path planning mdp model
+
         # self.initialsiePathPlanningMDP()
-        # self.pathPlanning(self.robots[0], (1,6))
+        # self.pathPlanning(self.robots[0], (4,1),[(1,6),(1,1)])
 
         
+        # test motion_model with path and blank utility
+        # to test put the robot in quare 4,1 and run this code
+        # you should notice some bad things such as the robot 360 every time it moves and the cell size maybe slightly off 
+        # but it kinda works 
 
-
+        path = ([0,2,2,2,1],[])
+        goalStates = [(1,1)]
+        self.robots[0].motion(path,goalStates)
+        
         # self.orderModel(6)
     
 
-    def orderAttrution(self):
-        # recieve an order/ get the next order from the queue
-        # 
-
-        # go throught all the robots and calculate the paths 
-
-        # assign the order to the robot with the shortest path
-
-        # tell the robot to move to the follow the path and update its state
-
-        # add the path to the active paths list
-
-        # 
-        pass
+   
         # 
 
 
@@ -130,8 +133,85 @@ class WaiterRobotsNode(object):
 
 
 
+    def orderAttribution(self,data):
+        # recieve an order/ get the next order from the queue
+        print("order recieved: ", data.data)
+        
+        order = data.data # order of the form # tn where n is the table index
+
+        # define the goal states for the kitchen and each table 
+
+        # kitchen goal state is (9,2) of the form (x,y)
+
+        kitchenState1 = (9,1) 
+        kitchenState2 = (9,2)
+
+        # table goal states are the squares around the table of the form [(x,y), (x,y), (x,y), (x,y)]
+
+        # get table index from the order
+
+        tableIndex = int(order[1:])
+
+        kitchenGoalStates = np.concatenate((self.getGoalStates(kitchenState1), self.getGoalStates(kitchenState2)), axis=0)
+
+         # table location
+        tableLocation = self.tableLocations[tableIndex]
+        tableGoalStates =  self.getGoalStates(tableLocation)
+
+        # loop through robots that are in the oder attribution sate and calculate their respective policies
+        idlingRobots = []
+        for robot in self.robots:
+            if robot.state == 'order-attribution':
+                idlingRobots.append(robot)
+        
+        # for each robot calculate the policy to the kitchen and the table
+        policies = []
+        for robot in idlingRobots:
+            kitchenPolicy = self.pathPlanning(robot, kitchenGoalStates)
+            tablePolicy = self.pathPlanning(kitchenGoalStates, tableGoalStates)
+            policies.append((kitchenPolicy, tablePolicy,robot.id))
 
 
+
+        # assign the order to the robot with the shortest path
+        shortestPath = 40 # we know the max path generated is 20 each way so this is a safe upper bound
+        shortestPolicyIndex = 0
+
+        for i in range(0, len(policies)):
+            if len(policies[i][0]) + len(policies[i][1]) < shortestPath:
+                shortestPath = len(policies[i][0][0]) + len(policies[i][1][0])
+                shortestPolicyIndex = i
+        
+        # assign the order to the robot with the shortest path
+        print("assigning order to robot: ", policies[shortestPolicyIndex][2], " with path to kitchen: ", policies[shortestPolicyIndex][0][0], " and path to table: ", policies[shortestPolicyIndex][1][0])
+        # TODO send off 
+
+        # add the policies to the robots active paths
+        self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][0][0])
+        self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][1][0])
+
+
+        # tell the robot to move to the follow the path and update its state - will need utility for this aswell
+        self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-kitchen'
+        self.robots[policies[shortestPolicyIndex][2]].motion(policies[shortestPolicyIndex][0],kitchenGoalStates)
+        self.robots[policies[shortestPolicyIndex][2]].state = 'kitchen'
+        # TODO its collect order - logic for this
+        self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-table'
+        self.robots[policies[shortestPolicyIndex][2]].motion(policies[shortestPolicyIndex][1],tableGoalStates)
+        self.robots[policies[shortestPolicyIndex][2]].state = 'table'
+        # TODO its delivered order - logic for this
+        # TODO probably should of logged for all the above
+
+        # add the path to the robots active path list - again utility is needed for this
+
+        # execute policy 
+        # robot state update 
+
+        # remove from active paths 
+
+
+        # 
+        pass
 
 
 
@@ -302,7 +382,76 @@ class WaiterRobotsNode(object):
         #calculate the probability
         return self.transitionModel[state[1]][state[0]][action][nextState[1]][nextState[0]] / sum
 
-    def pathPlanning(self,robot, b ): # TODO remove default values - just for testing
+
+
+    #given table location and map return goalstates
+    def getGoalStates(self, tableLocation):
+        goalStates = []
+        # goal states are the 4 adjacent states to the table
+        # check if there is an obstacle to the left
+        if tableLocation[0]-1 >= 0:
+            if self.pathStates[tableLocation[1]][tableLocation[0]-1] == ' ':
+                goalStates.append((tableLocation[1],tableLocation[0]-1))
+        # check if there is an obstacle to the right
+        if tableLocation[0]+1 < len(self.pathStates[tableLocation[1]]):
+            if self.pathStates[tableLocation[1]][tableLocation[0]+1] == ' ':
+                goalStates.append((tableLocation[1],tableLocation[0]+1))
+        # check if there is an obstacle above
+        if tableLocation[1]+1 < len(self.pathStates):
+            if self.pathStates[tableLocation[1]+1][tableLocation[0]] == ' ':
+                goalStates.append((tableLocation[1]+1,tableLocation[0]))
+        # check if there is an obstacle below
+        if tableLocation[1]-1 >= 0:
+            if self.pathStates[tableLocation[1]-1][tableLocation[0]] == ' ':
+                goalStates.append((tableLocation[1]-1, tableLocation[0]))
+        
+        # returns goal state array of the form [(x,y), (x,y), (x,y), (x,y)]
+        return goalStates
+
+
+    # given utility, actions, transitionModel and current state, return the policy []
+    def getPolicy(self, utilities, currentState, goalStates):
+        policy = []
+     
+        found = False
+        while (not found and len(policy) < 20):
+            # for each action find the action that maximises the utility
+
+
+            maxAction = -1
+            maxUtility = -1
+            for k in range (0, len(self.actions[currentState[1]][currentState[0]])):
+                # for each action find the utility
+                # sum of transition_model(state,action) * utility_policy(state)
+                sum = 0
+                for l in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k])):
+                    for m in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][l])):
+                        sum += self.transitionModel[currentState[1]][currentState[0]][k][l][m] * utilities[l][m]
+                if (sum > maxUtility):
+                    maxUtility = sum
+                    maxAction = k
+            # update the policy
+            policy.append(maxAction)
+            # update the current state
+            if (maxAction == 0):
+                currentState = (currentState[0], currentState[1] + 1)
+            elif (maxAction == 1):
+                currentState = (currentState[0], currentState[1] - 1)
+            elif (maxAction == 2):
+                currentState = (currentState[0] - 1, currentState[1])
+            elif (maxAction == 3):
+                currentState = (currentState[0] + 1, currentState[1])
+
+            #check if we have reached the goal
+            for i in range (0, len(goalStates)):
+                if (currentState == goalStates[i]):
+                    found = True
+                    break
+
+        print("policy for location: ", currentState, " is: ", policy)
+        return policy
+
+    def pathPlanning(self,robot, initialState, goalStates ): # TODO remove default values - just for testing
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
 
@@ -324,7 +473,9 @@ class WaiterRobotsNode(object):
 
 
         # give a reward of 1 for reaching the goal state
-        rewards[b[1]][b[0]] = 1
+        for i in range (0, len(goalStates)):
+            rewards[goalStates[i][1]][goalStates[i][0]] = 1
+
         # for each path in the active paths that is not your own, follow the path applying negative reward for each step -1
 
         # TODO figure out form of the policy so that we can store the active path
@@ -423,47 +574,19 @@ class WaiterRobotsNode(object):
         # update utilities based on neighbours
         # repeat until convergence
 
-        #give utilities caluclate the policy
-        policy = []
-        currentState = (robot.location[0], robot.location[1])
-        while (currentState != b and len(policy) < 20):
-            # for each action find the action that maximises the utility
+        # #give utilities caluclate the policy
+     
+        currentState = initialState
+     
 
-
-            maxAction = -1
-            maxUtility = -1
-            for k in range (0, len(self.actions[currentState[1]][currentState[0]])):
-                # for each action find the utility
-                # sum of transition_model(state,action) * utility_policy(state)
-                sum = 0
-                for l in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k])):
-                    for m in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][l])):
-                        sum += self.transitionModel[currentState[1]][currentState[0]][k][l][m] * utilities[l][m]
-                if (sum > maxUtility):
-                    maxUtility = sum
-                    maxAction = k
-            # update the policy
-            policy.append(maxAction)
-            # update the current state
-            if (maxAction == 0):
-                currentState = (currentState[0], currentState[1] + 1)
-            elif (maxAction == 1):
-                currentState = (currentState[0], currentState[1] - 1)
-            elif (maxAction == 2):
-                currentState = (currentState[0] - 1, currentState[1])
-            elif (maxAction == 3):
-                currentState = (currentState[0] + 1, currentState[1])
-
-
-
-        print("policy for location: ", robot.location, " is: ", policy)
-        # return optimal policy
+        policy = self.getPolicy(utilities, currentState, goalStates)
+        return (policy,utilities)
 
         # to store the path chosen we need to store the policy and the robot following it 
         # ((robot,(x,y)), y[]), where x is the initial state and y is the policy
         # then when the robot moves we update the policy to remove the first action and if necessary recalculate the policy from the utility
         # therefore the robot will need to store the current utility its following  
-        pass
+        
 
 
 
