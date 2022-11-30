@@ -102,13 +102,17 @@ class Robot(object):
             if self.location != expectedLocation:
                 # update policy based on utility
                 from node import WaiterRobotsNode
-                super(WaiterRobotsNode, self).updatePolicy(utility, self.location, goalStates) # TODO goal states
-                pass
-
+                # TODO will likely have to use publishers and subscribers to update the transition model
+                # super(WaiterRobotsNode, self).updatePolicy(utility, self.location, goalStates) # TODO goal states
+      
+  
 
             #  if policy state is the same as the state then update the policy removing from the end 
             else:
-                
+                from node import WaiterRobotsNode
+                # TODO will likely have to use publishers and subscribers to update the transition model
+                # super(WaiterRobotsNode, self).updateTransitionProbabilities((prevLocation[0], prevLocation[1]), policy[0], expectedLocation )
+
                 policy.pop(0)
                 if len(self.activePaths ) > 0:
                     self.activePaths[0].pop(0)

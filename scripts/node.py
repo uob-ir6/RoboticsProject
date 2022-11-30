@@ -66,7 +66,7 @@ class WaiterRobotsNode(object):
         #initialise path planning mdp model
 
         self.initialsiePathPlanningMDP()
-        path = self.pathPlanning(self.robots[0], (10,10),[(3,1)])
+        path = self.pathPlanning(self.robots[0], (3,1),[(10,10)])
 
 
 
@@ -373,6 +373,13 @@ class WaiterRobotsNode(object):
     def getActions(self, state):
         #state = (x,y)
         return self.actions[state[1]][state[0]]
+   
+
+    def updateTransitionProbabilities(self, previousState, action, nextState ):  
+        self.transitionModel[previousState[1]][previousState[0]][action][0][nextState[1]][nextState[0]] += 1
+        self.transitionModel[previousState[1]][previousState[0]][action][1] += 1
+    
+
     def getTransitionProbabity(self, state, action, nextState):
         #state = (x,y)
         #nextState = (x,y)
@@ -514,7 +521,7 @@ class WaiterRobotsNode(object):
 
         # for each robot apply negative rewards along policy from initial state
         for robot in self.robots:
-            if (robot != self):
+            if (robot != self and robot.location != initialState):
                 # loop throught active paths 
                 for i in range (0, len(robot.activePaths)):
                     # for each policy 
@@ -527,7 +534,7 @@ class WaiterRobotsNode(object):
         # for each robot apply a negative reward for their current location -1, except for the current robot
 
         for i in range (0, len(self.robots)):  
-            if i != robot.id:
+            if i != robot.id or self.robots[i].location != initialState:
                 print("robot: ", i,"is at location: ", self.robots[i].location)
                 rewards[self.robots[i].location[1]][self.robots[i].location[0]] = -1
          
