@@ -435,8 +435,8 @@ class WaiterRobotsNode(object):
                 sum = 0
                 for l in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][0])):
                     for m in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][0][l])):
-                        #sum += self.getTransitionProbabity((j,i), 0, (m,l)) * utilities[l][m]
-                        sum += self.transitionModel[currentState[1]][currentState[0]][k][0][l][m] * utilities[l][m]
+                        sum += self.getTransitionProbabity(currentState, k, (m,l)) * utilities[l][m]
+                        # sum += self.transitionModel[currentState[1]][currentState[0]][k][0][l][m] * utilities[l][m]
                 if (sum > maxUtility):
                     maxUtility = sum
                     maxAction = k
@@ -593,7 +593,8 @@ class WaiterRobotsNode(object):
                         sum = 0
                         for l in range (0, len(self.transitionModel[i][j][k][0])):
                             for m in range (0, len(self.transitionModel[i][j][k][0][l])):
-                                sum += self.transitionModel[i][j][k][0][l][m] * utilities[l][m]
+                                sum += self.getTransitionProbabity((j,i),k,(m,l)) * utilities[l][m]
+                                # sum += self.transitionModel[i][j][k][0][l][m] * utilities[l][m]
                         if (sum > maxUtility):
                             maxUtility = sum
                             maxAction = k
