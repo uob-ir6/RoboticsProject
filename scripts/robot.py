@@ -131,7 +131,7 @@ def moveForwardOneSquare (self, pub):
     i =0
     rate = rospy.Rate(10) # 10hz
     threshold = 0.1
-    cellSize = 2.795
+    cellSize = 2.81
     while (xdif < (cellSize - threshold) and ydif  < (cellSize - threshold)):
             base_data = Twist()
             base_data.linear.x = 1
@@ -194,7 +194,7 @@ def rotate (self, pub, direction ):
 
     zdif = 1
     wdif = 1
-    threshold = 0.02
+    threshold = 0.0085
     direction = 1
 
     while (zdif > threshold or wdif > threshold):
@@ -202,14 +202,21 @@ def rotate (self, pub, direction ):
             yawCurrent = convertTo360(findYaw(currentOrientation[0],currentOrientation[1]))
             yawTarget = convertTo360(findYaw(targetDirection[0],targetDirection[1]))
             
+            factor = min(((yawCurrent - yawTarget) % 360),((yawTarget-yawCurrent) % 360)) / 360
+
+
+            if factor < 0.05:
+                factor = 1/3.5
+            else:
+                factor  = 3
             
             if ( (yawCurrent - yawTarget) % 360) > 180 :
-                direction = 1
+                direction = 1 
             else:
-                direction = -1
+                direction = -1 
 
             base_data = Twist()
-            base_data.angular.z = 0.3 * direction # 0.75 rad/s
+            base_data.angular.z = 0.3 * direction * factor # 0.75 rad/s
             pub.publish( base_data )
             # update current orientation
 
