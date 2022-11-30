@@ -226,6 +226,9 @@ class WaiterRobotsNode(object):
         HIGH = 1 # every factor of 1
         MEDIUM = 2 # every factor of 2
         LOW = 3 # every factor of 3
+        
+        Q = [] #queue of orders
+        
 
         #TODO set timeout between tables
 
@@ -246,7 +249,19 @@ class WaiterRobotsNode(object):
 
             for i in range (0, int(numberOfOrders)):
                 # randomly generate order
-                table = random.randint(1, numberOfTable)
+                
+                while 1:
+                	table = random.randint(1, numberOfTable)
+                	if table not in Q:
+                		break
+                if len(Q)<5:
+                	Q.append(table)
+                	
+                elif Q and len(Q)=5:
+                	for j in range(0,4):
+                		Q[j] = Q[j+1]
+                	Q[4] = table
+                	             	               	
                 order = 'T' + str(table)
                 # publish order
 
