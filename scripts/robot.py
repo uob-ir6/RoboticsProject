@@ -1,6 +1,6 @@
 
 from geometry_msgs.msg import Twist
-
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Transform
 from geometry_msgs.msg import TransformStamped
 from tf.msg import tfMessage
@@ -9,6 +9,7 @@ import rospy
 import time
 from nav_msgs.msg import Odometry
 import numpy as np
+import math
 
 class Robot(object):
     def __init__(self, robotId, pose, state, location, assignmentPoint):
@@ -19,20 +20,29 @@ class Robot(object):
         self.activePaths = [] # array of (policies, utility) mappings
         self.location = location
         self.assignmentPoint = assignmentPoint
-        self.tf_message = tfMessage()
+        # self.tf_message = tfMessage()
         
 
         robot_prefix = "robot_"+str(self.id)
         # robot_prefix = ""
         odom_Sub = rospy.Subscriber(robot_prefix+"/odom", Odometry, self.odomCallback)
 
-        
+
+        scanRelay = rospy.Subscriber(robot_prefix+"/base_scan", LaserScan, self.LaserRelay, queue_size=1)
+
         time.sleep(3)
        
         
         # add motion model subscribeers here stuff here TODO
         # add functions to execute the actions here TODO
 
+
+    def LaserRelay(self, data):
+        # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
+        robot_prefix = str(self.id)
+        scanRelayPub = rospy.Publisher("/scan", LaserScan, queue_size=100)
+
+        scanRelayPub.publish(data)
 
 
     def odomCallback(self, data):
@@ -43,19 +53,17 @@ class Robot(object):
         
 
     def motion (self, path,goalStates) :
+        robot_prefix = "robot_"+str(self.id)
+        # robot_prefix = ""
+        pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=100)
+
+        # # TOD ORemove test rotate
+        # rotate(self, pub, 2)
+
         #path is (policy, utility) mapping
 
         policy = path[0]
         utility = path[1]
-
-
-        
-
-        
-
-        robot_prefix = "robot_"+str(self.id)
-        # robot_prefix = ""
-        pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=100)
 
 
         # takes in a policy and executes it
@@ -100,8 +108,11 @@ class Robot(object):
 
             #  if policy state is the same as the state then update the policy removing from the end 
             else:
+                
                 policy.pop(0)
-                self.activePaths[0].pop(0)
+                if len(self.activePaths ) > 0:
+                    self.activePaths[0].pop(0)
+
        
 
 
@@ -120,7 +131,7 @@ def moveForwardOneSquare (self, pub):
     i =0
     rate = rospy.Rate(10) # 10hz
     threshold = 0.1
-    cellSize = 2
+    cellSize = 2.795
     while (xdif < (cellSize - threshold) and ydif  < (cellSize - threshold)):
             base_data = Twist()
             base_data.linear.x = 1
@@ -142,13 +153,13 @@ def rotate (self, pub, direction ):
     # get current pose 
     # threshold = (z,w)
 
-    print("ori: ", self.pose.orientation)
 
     up = (0.7, 0.7)
     down = (-0.7, 0.7)
     left = (1, 0)
     right = (0, 1)
 
+    # TODO find the direction of rotation closest to the target 
     targetDirection = None
 
     if (direction == 0):
@@ -163,7 +174,16 @@ def rotate (self, pub, direction ):
 
     currentOrientation = (self.pose.orientation.z, self.pose.orientation.w)
   
+    # direction = targetDirection.x - currentOrientation.x + targetDirection.y - currentOrientation.y
+    
+    yawCurrent = convertTo360(findYaw(currentOrientation[0],currentOrientation[1]))
+    yawTarget = convertTo360(findYaw(targetDirection[0],targetDirection[1]))
 
+
+    print("yaw current: ", yawCurrent)
+    print("yaw target: ", yawTarget)
+
+    print("modular difference: ", (60 - 325) % 360 )
 
     # determine wwhich direction to rotate 
 
@@ -175,13 +195,24 @@ def rotate (self, pub, direction ):
     zdif = 1
     wdif = 1
     threshold = 0.02
+    direction = 1
 
     while (zdif > threshold or wdif > threshold):
-            print("rotating zdif: ", zdif, " wdif: ", wdif)
+
+            yawCurrent = convertTo360(findYaw(currentOrientation[0],currentOrientation[1]))
+            yawTarget = convertTo360(findYaw(targetDirection[0],targetDirection[1]))
+            
+            
+            if ( (yawCurrent - yawTarget) % 360) > 180 :
+                direction = 1
+            else:
+                direction = -1
+
             base_data = Twist()
-            base_data.angular.z = 0.3 # 0.75 rad/s
+            base_data.angular.z = 0.3 * direction # 0.75 rad/s
             pub.publish( base_data )
             # update current orientation
+
             currentOrientation = (self.pose.orientation.z, self.pose.orientation.w)
             # calculate difference between current orientation and desired orientation
             zdif = abs(currentOrientation[0] - targetDirection[0])
@@ -193,6 +224,19 @@ def rotate (self, pub, direction ):
     currentTime = rospy.Time.now()
     recalculateTransform(self, currentTime)
 
+
+
+def findYaw(z, w):
+    t3 = +2.0 * (w * z + 0 * 0)
+    t4 = +1.0 - 2.0 * (0 * 0 + z * z)
+    
+    return math.degrees(math.atan2(t3, t4))
+
+def convertTo360(x):
+    if x < 0:
+        return (x + 180) + 180
+    else:
+        return x
 
 def recalculateTransform  (self,currentTime):
     """

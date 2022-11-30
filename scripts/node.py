@@ -44,6 +44,7 @@ class WaiterRobotsNode(object):
                        ocuccupancy_map.info.resolution))
 
 
+
         
         
         
@@ -65,7 +66,7 @@ class WaiterRobotsNode(object):
         #initialise path planning mdp model
 
         # self.initialsiePathPlanningMDP()
-        # self.pathPlanning(self.robots[0], (4,1),[(1,6),(1,1)])
+        # self.pathPlanning(self.robots[0], (1,1),[(2,6)])
 
         
         # test motion_model with path and blank utility
@@ -73,9 +74,9 @@ class WaiterRobotsNode(object):
         # you should notice some bad things such as the robot 360 every time it moves and the cell size maybe slightly off 
         # but it kinda works 
 
-        path = ([0,2,2,2,1],[])
-        goalStates = [(1,1)]
-        self.robots[0].motion(path,goalStates)
+        # path = ([1,1,1,1,1,1,1,1,1],[])
+        # goalStates = [(10,10)]
+        # self.robots[0].motion(path,goalStates)
         
         # self.orderModel(6)
     
@@ -451,6 +452,13 @@ class WaiterRobotsNode(object):
         print("policy for location: ", currentState, " is: ", policy)
         return policy
 
+    def applyNegativeAlongPath(self, rewards, negativePath, initialState):
+        # for each state in the negative path, apply a negative reward TODO fix to go from initial state
+        negativePathRewardValue = -2
+        for i in range (0, len(negativePath)):
+            rewards[negativePath[i][1]][negativePath[i][0]] = -negativePathRewardValue
+        return rewards
+
     def pathPlanning(self,robot, initialState, goalStates ): # TODO remove default values - just for testing
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
@@ -478,8 +486,18 @@ class WaiterRobotsNode(object):
 
         # for each path in the active paths that is not your own, follow the path applying negative reward for each step -1
 
-        # TODO figure out form of the policy so that we can store the active path
+        # apply negative rewards along the active paths TODO possible race condition in this section
 
+        # for each robot apply negative rewards along policy from initial state
+        for robot in self.robots:
+            if (robot != self):
+                # loop throught active paths 
+                for i in range (0, len(robot.activePaths)):
+                    # for each policy 
+                    negativePath = robot.activePaths[i][0]
+                    
+                    rewards = self.applyNegativeAlongPath(self, rewards, negativePath, robot.location)
+        
 
 
         # for each robot apply a negative reward for their current location -1, except for the current robot
