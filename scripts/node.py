@@ -65,8 +65,10 @@ class WaiterRobotsNode(object):
 
         #initialise path planning mdp model
 
-        # self.initialsiePathPlanningMDP()
-        # self.pathPlanning(self.robots[0], (1,1),[(2,6)])
+        self.initialsiePathPlanningMDP()
+        path = self.pathPlanning(self.robots[0], (10,10),[(3,1)])
+
+
 
         
         # test motion_model with path and blank utility
@@ -75,8 +77,8 @@ class WaiterRobotsNode(object):
         # but it kinda works 
 
         # path = ([1,1,1,1,1,1,1,1,1],[])
-        # goalStates = [(10,10)]
-        # self.robots[0].motion(path,goalStates)
+        goalStates = [(3,1)]
+        self.robots[0].motion(path,goalStates)
         
         # self.orderModel(6)
     
@@ -349,7 +351,9 @@ class WaiterRobotsNode(object):
                             # right
                             if (j+1 < len(self.pathStates[j])):
                                 possibleTransitions[i][j+1] = 1
-                    transitionModelActionModels.append(possibleTransitions)
+                        
+                    # apend possible transitions and the sum
+                    transitionModelActionModels.append((possibleTransitions, 1))
                     # possibleTransitions[i][j] = '9' I use this to show current state whilst debugging
                     # if (i == 6 and j == 6):
                     #     print("for state ", i, j, " action ", actions[i][j], "at : ",k, " possible transitions are \n", possibleTransitions)
@@ -374,14 +378,17 @@ class WaiterRobotsNode(object):
         #nextState = (x,y)
         # action = (up = 0, down = 1, left = 2, right = 3)
         #sum up the values in the transition 
-        sum = 0
-        for i in range (0, len(self.transitionModel[state[1]][state[0]][action])):
-            for j in range (0, len(self.transitionModel[state[1]][state[0]][action][i])):
-                sum += self.transitionModel[state[1]][state[0]][action][i][j]
-        print("sum: ", sum)
+        
+        sum = self.transitionModel[state[1]][state[0]][action][1] 
+        # for i in range (0, len(self.transitionModel[state[1]][state[0]][action])):
+        #     for j in range (0, len(self.transitionModel[state[1]][state[0]][action][i])):
+        #         sum += self.transitionModel[state[1]][state[0]][action][i][j]
+        # print("sum: ", sum)
+        if sum == 0:
+            return 0
 
         #calculate the probability
-        return self.transitionModel[state[1]][state[0]][action][nextState[1]][nextState[0]] / sum
+        return self.transitionModel[state[1]][state[0]][action][0][nextState[1]][nextState[0]] / sum
 
 
 
@@ -421,13 +428,15 @@ class WaiterRobotsNode(object):
 
             maxAction = -1
             maxUtility = -1
-            for k in range (0, len(self.actions[currentState[1]][currentState[0]])):
+
+            for k in range (0, len(self.getActions((currentState[0],currentState[1])))):
                 # for each action find the utility
                 # sum of transition_model(state,action) * utility_policy(state)
                 sum = 0
-                for l in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k])):
-                    for m in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][l])):
-                        sum += self.transitionModel[currentState[1]][currentState[0]][k][l][m] * utilities[l][m]
+                for l in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][0])):
+                    for m in range (0, len(self.transitionModel[currentState[1]][currentState[0]][k][0][l])):
+                        #sum += self.getTransitionProbabity((j,i), 0, (m,l)) * utilities[l][m]
+                        sum += self.transitionModel[currentState[1]][currentState[0]][k][0][l][m] * utilities[l][m]
                 if (sum > maxUtility):
                     maxUtility = sum
                     maxAction = k
@@ -455,8 +464,23 @@ class WaiterRobotsNode(object):
     def applyNegativeAlongPath(self, rewards, negativePath, initialState):
         # for each state in the negative path, apply a negative reward TODO fix to go from initial state
         negativePathRewardValue = -2
+        currentState = initialState
         for i in range (0, len(negativePath)):
-            rewards[negativePath[i][1]][negativePath[i][0]] = -negativePathRewardValue
+
+            # get action on path
+            action = negativePath[i]
+            # follow action to get next state
+            if (action == 0):
+                currentState = (currentState[0], currentState[1] + 1)
+            elif (action == 1):
+                currentState = (currentState[0], currentState[1] - 1)
+            elif (action == 2):
+                currentState = (currentState[0] - 1, currentState[1])
+            elif (action == 3):
+                currentState = (currentState[0] + 1, currentState[1])
+            # apply negative reward to state
+            rewards[currentState[1]][currentState[0]] = negativePathRewardValue
+            
         return rewards
 
     def pathPlanning(self,robot, initialState, goalStates ): # TODO remove default values - just for testing
@@ -563,13 +587,13 @@ class WaiterRobotsNode(object):
 
                     maxAction = -1
                     maxUtility = -1
-                    for k in range (0, len(self.actions[i][j])):
+                    for k in range (0, len(self.getActions((j,i)))):
                         # for each action find the utility
                         # sum of transition_model(state,action) * utility_policy(state)
                         sum = 0
-                        for l in range (0, len(self.transitionModel[i][j][k])):
-                            for m in range (0, len(self.transitionModel[i][j][k][l])):
-                                sum += self.transitionModel[i][j][k][l][m] * utilities[l][m]
+                        for l in range (0, len(self.transitionModel[i][j][k][0])):
+                            for m in range (0, len(self.transitionModel[i][j][k][0][l])):
+                                sum += self.transitionModel[i][j][k][0][l][m] * utilities[l][m]
                         if (sum > maxUtility):
                             maxUtility = sum
                             maxAction = k
