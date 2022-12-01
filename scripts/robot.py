@@ -78,17 +78,10 @@ class Robot(object):
 
 
         # for each action in the policy 0, 1, 2 ,3 = up, down, left, right
-        print("executing policy: ", policy)
+
         while len(policy) > 0:
             # previouse location
             prevLocation = self.location
-
-
-            #   execute the action
-            print("policy: ", policy)
-            print("this shoudl be the same as: ", self.activePaths[0])
-            print("where we are now executing the action: ", policy[0])
-            print()
 
             rotate(self,pub,policy[0])
             moveForwardOneSquare(self,pub)

@@ -22,6 +22,9 @@ lock = threading.Lock()
 
 def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalStates):
     # thread to execute the policies
+    print()
+
+    start = time.time()
     
     # add the policies to the robots active paths
     robot.activePaths.append(shortestPolicies[0][0])
@@ -37,8 +40,15 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
     robot.motion(shortestPolicies[1],tableGoalStates)
     robot.activePaths.pop(0)
     robot.state = 'table'
-    
-    
+    robot.state = "order-attribution"
+
+    end = time.time()
+
+    print("robot ", robot.id, " executed policy 1: ", shortestPolicies[0][0])
+    print("and policy two: ", shortestPolicies[1][0]) 
+    print("total policy length: ", len(shortestPolicies[0][0]) + len(shortestPolicies[1][0]))
+    print("robot ", robot.id, " delivery time: ", end - start, " seconds")
+    print()
     # TODO its delivered order - logic for this
     # TODO probably should of logged for all the above
 
@@ -64,16 +74,12 @@ class WaiterRobotsNode(object):
         self.actions = []
         self.transitionModel = []
 
-        rospy.loginfo("Waiting for a map...")
+        
         try:
             ocuccupancy_map = rospy.wait_for_message("/map", OccupancyGrid, 20)
         except:
-            rospy.logerr("Problem getting a map. Check that you have a map_server"
-                     " running: rosrun map_server map_server <mapname> " )
             sys.exit(1)
-        rospy.loginfo("Map received. %d X %d, %f px/m." %
-                      (ocuccupancy_map.info.width, ocuccupancy_map.info.height,
-                       ocuccupancy_map.info.resolution))
+   
 
 
 
@@ -83,7 +89,7 @@ class WaiterRobotsNode(object):
         # initialise map and robots
 
        
-        self.initialiseMapAndRobots(4)
+        self.initialiseMapAndRobots(3)
         self.initialsiePathPlanningMDP()
 
         # start order attributiob subscriber 
@@ -169,11 +175,7 @@ class WaiterRobotsNode(object):
 
 
     def orderAttribution(self, data):
-        print("robot 0 state: ", self.robots[0].state)
-        print("robot 1 state: ", self.robots[1].state)
-
-        # recieve an order/ get the next order from the queue
-        print("order recieved: ", data.data)
+        start = time.time()
         
         order = data.data.split(' ')[0] # order of the form # tn where n is the table index
 
@@ -189,7 +191,7 @@ class WaiterRobotsNode(object):
         # get table index from the order
 
         tableIndex = int(order[1:])
-        print("order for table: ", tableIndex)
+   
 
         kitchenGoalStates = np.concatenate((self.getGoalStates(kitchenState1), self.getGoalStates(kitchenState2)), axis=0)
 
@@ -197,19 +199,19 @@ class WaiterRobotsNode(object):
          # table location
         tableLocation = self.tableLocations[tableIndex-1]
         tableGoalStates =  self.getGoalStates(tableLocation)
-        print("table goal states: ", tableGoalStates)
+   
 
         # loop through robots that are in the oder attribution sate and calculate their respective policies
         lock.acquire()
 
         idlingRobots = []
-        print("idling robots for table ", tableIndex, ": ", idlingRobots)
+
         for robot in self.robots:
             if robot.state == 'order-attribution':
-                print("recorded state: ", robot.state, "for robot: ", robot.id)
+             
                 idlingRobots.append(robot)
         
-        print("idling robots for table ", tableIndex, ": ", idlingRobots)
+
         
         # for each robot calculate the policy to the kitchen and the table
         policies = []
@@ -218,7 +220,7 @@ class WaiterRobotsNode(object):
        
             # find the goal state that the kitchen policy leads to
             initialState = self.findEndStateFromPolicy(robot.location, kitchenPolicy[0]) 
-            print("calculated initial state: ", initialState)
+
             tablePolicy = self.pathPlanning(robot, initialState, tableGoalStates)
             policies.append((kitchenPolicy, tablePolicy,robot.id))
 
@@ -242,22 +244,15 @@ class WaiterRobotsNode(object):
         # assign the order to the robot with the shortest path
         # TODO send off 
 
-        print("order Assigned to robot: ", policies[shortestPolicyIndex][2])
-        print("whos initial location is", self.robots[policies[shortestPolicyIndex][2]].location)
-        print("to go to kitchen: ")
-        print("via policy: ", policies[shortestPolicyIndex][0][0])
-        print("to go to table: ", tableIndex)
-        print("via policy: ", policies[shortestPolicyIndex][1][0])
-        print("from kitchen goal state: ", self.findEndStateFromPolicy(self.robots[policies[shortestPolicyIndex][2]].location, kitchenPolicy[0]) )
-
-        print()
+        
         self.robots[policies[shortestPolicyIndex][2]].state ='moving-to-kitchen'
         lock.release()
-        print("new robot state: for robot: ", self.robots[policies[shortestPolicyIndex][2]].id, "is: ", self.robots[policies[shortestPolicyIndex][2]].state)
+  
         x = threading.Thread(target=executionThread, args=(self, self.robots[policies[shortestPolicyIndex][2]], policies[shortestPolicyIndex], kitchenGoalStates, tableGoalStates))
 
-        print("end robot 0 state: ", self.robots[0].state)
-        print("end robot 1 state: ", self.robots[1].state)
+        end = time.time()
+        print("time taken to assign order: T", tableIndex, "to robot: ", self.robots[policies[shortestPolicyIndex][2]].id, "is: ", end-start)
+        print()
         
         x.start()
     
@@ -461,7 +456,7 @@ class WaiterRobotsNode(object):
 
         #end timer
         end = time.time()
-        print("time taken to generate transition model: ", end - start)
+
 
 # define some helper functions for the path planning mdp 
 # get the reward for a state
