@@ -94,7 +94,7 @@ class WaiterRobotsNode(object):
         # initialise map and robots
 
        
-        self.initialiseMapAndRobots(2)
+        self.initialiseMapAndRobots(4)
         self.initialsiePathPlanningMDP()
 
         # start order attributiob subscriber 
@@ -229,12 +229,12 @@ class WaiterRobotsNode(object):
                 # for each robot calculate the policy to the kitchen and the table
                 policies = []
                 for robot in idlingRobots:
-                    kitchenPolicy = self.pathPlanning(robot, robot.location, kitchenGoalStates)
+                    kitchenPolicy = self.pathPlanning( robot.location, kitchenGoalStates)
             
                     # find the goal state that the kitchen policy leads to
                     initialState = self.findEndStateFromPolicy(robot.location, kitchenPolicy[0]) 
 
-                    tablePolicy = self.pathPlanning(robot, initialState, tableGoalStates)
+                    tablePolicy = self.pathPlanning( initialState, tableGoalStates)
                     policies.append((kitchenPolicy, tablePolicy,robot.id))
 
         
@@ -603,12 +603,28 @@ class WaiterRobotsNode(object):
             elif (action == 3):
                 currentState = (currentState[0] + 1, currentState[1])
             # apply negative reward to state
-            # print((currentState[1], currentState[0]))
+  
             rewards[currentState[1]][currentState[0]] = negativePathRewardValue
             
         return rewards
 
-    def pathPlanning(self,robot, initialState, goalStates ): # TODO remove default values - just for testing
+    def endOfPolicyState(self, policy, initialState):
+        currentState = initialState
+        for i in range (0, len(policy)):
+            # get action on path
+            action = policy[i]
+            # follow action to get next state
+            if (action == 0):
+                currentState = (currentState[0], currentState[1] + 1)
+            elif (action == 1):
+                currentState = (currentState[0], currentState[1] - 1)
+            elif (action == 2):
+                currentState = (currentState[0] - 1, currentState[1])
+            elif (action == 3):
+                currentState = (currentState[0] + 1, currentState[1])
+        return currentState
+
+    def pathPlanning(self, initialState, goalStates ): # TODO remove default values - just for testing
         # a = (x,y) b = (x,y)
         # calculate the best path between the two points 
 
@@ -641,11 +657,15 @@ class WaiterRobotsNode(object):
         for robot in self.robots:
             if (robot != self and robot.location != initialState):
                 # loop throught active paths 
-                for i in range (0, len(robot.activePaths)):
-                    # for each policy 
-                    negativePath = robot.activePaths[i]
+
+                if len(robot.activePaths) > 1:
+                    # find initial state of second path
                     
-                    rewards = self.applyNegativeAlongPath(rewards, negativePath, robot.location)
+                    rewards = self.applyNegativeAlongPath(rewards, robot.activePaths[0], robot.location)
+                    newEndState = self.endOfPolicyState(robot.activePaths[0], robot.location)
+           
+                    rewards = self.applyNegativeAlongPath(rewards, robot.activePaths[1], newEndState)
+                    
         
 
 
