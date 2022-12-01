@@ -87,9 +87,7 @@ class Robot(object):
             # previouse location
             prevLocation = self.location
 
-            print("robot: ", self.id, " executing policy: ", policy)
-            print()
-
+            
             rotate(self,pub,policy[0])
             moveForwardOneSquare(self,pub)
 
@@ -140,7 +138,6 @@ def moveForwardOneSquare (self, pub):
     #each square is 1 meter
 
     # get current position 
-    print("robot: ", self.id, " moving forward one square: ",self.activePaths[0])
     
     currentPose = (self.pose.position.x, self.pose.position.y)
     previousPose = currentPose
