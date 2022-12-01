@@ -83,7 +83,7 @@ class WaiterRobotsNode(object):
         # initialise map and robots
 
        
-        self.initialiseMapAndRobots(2)
+        self.initialiseMapAndRobots(4)
         self.initialsiePathPlanningMDP()
 
         # start order attributiob subscriber 

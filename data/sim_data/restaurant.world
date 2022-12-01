@@ -71,8 +71,13 @@ floorplan
 pioneer( pose [ -4.5 -13.3 0 0 ] name "robot" color "red")
 pioneer( pose [ -1.3 -13.3 0 0 ] name "robot" color "blue")
 pioneer( pose [ 1.6 -13.3 0 0 ] name "robot" color "green")
-pioneer( pose [ 4.2 -13.3 0 0 ] name "robot" color "orange")
+pioneer( pose [ 4.4 -13.3 0 0 ] name "robot" color "orange")
 
+pioneer( pose [ 13.4 -7.5 0 0 ] name "robot" color "purple")
+pioneer( pose [ 13.4 -4.5 0 0 ] name "robot" color "cyan")
+pioneer( pose [ 13.4 -1.6 0 0 ] name "robot" color "pink")
+pioneer( pose [ 13.4 1.3 0 0 ] name "robot" color "black")
+pioneer( pose [ 13.4 4.6 0 0 ] name "robot" color "brown")
 
 #block( pose [ -24.269 48.001 0 180.000 ] color "red")
 
