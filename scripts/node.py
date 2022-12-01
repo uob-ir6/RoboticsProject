@@ -665,6 +665,8 @@ class WaiterRobotsNode(object):
                     newEndState = self.endOfPolicyState(robot.activePaths[0], robot.location)
            
                     rewards = self.applyNegativeAlongPath(rewards, robot.activePaths[1], newEndState)
+                else:
+                    rewards = self.applyNegativeAlongPath(rewards, robot.activePaths[0], robot.location)
                     
         
 
