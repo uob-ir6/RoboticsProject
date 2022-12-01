@@ -42,7 +42,6 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
 
     robot.motion(shortestPolicies[0],kitchenGoalStates)
     robot.activePaths.pop(0)
-    print("after going to kitchen, robot ", robot.id, " is at location: ", robot.location)
     robot.state = 'kitchen'
     # TODO its collect order - logic for this
     robot.state = 'moving-to-table'
@@ -53,8 +52,7 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
 
     end = time.time()
 
-    
-    print("robot ", robot.id, " delivery time: ", end - start, " seconds")
+
     print()
     # TODO its delivered order - logic for this
     # TODO probably should of logged for all the above
@@ -96,7 +94,7 @@ class WaiterRobotsNode(object):
         # initialise map and robots
 
        
-        self.initialiseMapAndRobots(3)
+        self.initialiseMapAndRobots(2)
         self.initialsiePathPlanningMDP()
 
         # start order attributiob subscriber 
@@ -240,11 +238,11 @@ class WaiterRobotsNode(object):
                     policies.append((kitchenPolicy, tablePolicy,robot.id))
 
         
-                print()
-                # print each policy generated nicely
-                for policy in policies:
-                    print("robot ", policy[2], " kitchen policy: ", policy[0][0], " table policy: ", policy[1][0])
-                print()
+                # print()
+                # # print each policy generated nicely
+                # for policy in policies:
+                #     print("robot ", policy[2], " kitchen policy: ", policy[0][0], " table policy: ", policy[1][0])
+                # print()
       
                 # assign the order to the robot with the shortest path
                 shortestPath = 40 # we know the max path generated is 20 each way so this is a safe upper bound
@@ -269,7 +267,7 @@ class WaiterRobotsNode(object):
         self.robots[policies[shortestPolicyIndex][2]].state ='moving-to-kitchen'
         self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][0][0])
         self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][1][0])
-        print("table policy: ", policies[shortestPolicyIndex][1][0] )
+       
 
         lock.release()
   

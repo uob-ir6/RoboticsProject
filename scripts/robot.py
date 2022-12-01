@@ -65,7 +65,7 @@ class Robot(object):
     def motion (self, path, goalStates) :
         robot_prefix = "robot_"+str(self.id)
         # robot_prefix = ""
-        pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=100)
+        pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=1)
 
         # # TOD ORemove test rotate
         # rotate(self, pub, 2)
@@ -87,7 +87,8 @@ class Robot(object):
             # previouse location
             prevLocation = self.location
 
-            print("robot: ", self.id, " executing policy action: ", policy[0])
+            print("robot: ", self.id, " executing policy: ", policy)
+            print()
 
             rotate(self,pub,policy[0])
             moveForwardOneSquare(self,pub)
@@ -131,6 +132,7 @@ class Robot(object):
 
                 if len(policy) > 0:
                     policy = policy[1:]
+        stop(self,pub)
 
 
 
@@ -138,6 +140,7 @@ def moveForwardOneSquare (self, pub):
     #each square is 1 meter
 
     # get current position 
+    print("robot: ", self.id, " moving forward one square: ",self.activePaths[0])
     
     currentPose = (self.pose.position.x, self.pose.position.y)
     previousPose = currentPose
@@ -165,6 +168,11 @@ def moveForwardOneSquare (self, pub):
      # after movement is complete, recalculate transform 
     currentTime = rospy.Time.now()
     recalculateTransform(self, currentTime)
+
+def stop(self, pub):
+    base_data = Twist()
+    base_data.linear.x = 0
+    pub.publish( base_data )
 
 def rotate (self, pub, direction ):
     # get current pose 
