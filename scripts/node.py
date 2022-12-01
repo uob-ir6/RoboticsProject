@@ -27,17 +27,22 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
     
     savedKitchenPolicy = np.copy(shortestPolicies[0][0])
     savedTablePolicy = np.copy(shortestPolicies[1][0])
-
+    
+    print("robot ", robot.id, " executed policy 1: ", savedKitchenPolicy)
+    print("and policy two: ", savedTablePolicy) 
+    print("total policy length: ", len(savedKitchenPolicy) + len(savedTablePolicy))
+    
     start = time.time()
 
     # add the policies to the robots active paths
-    robot.activePaths.append(shortestPolicies[0][0])
-    robot.activePaths.append(shortestPolicies[1][0])
+    # robot.activePaths.append(shortestPolicies[0][0])
+    # robot.activePaths.append(shortestPolicies[1][0])
 
     # tell the robot to move to the follow the path and update its state - will need utility for this aswell
 
     robot.motion(shortestPolicies[0],kitchenGoalStates)
     robot.activePaths.pop(0)
+    print("after going to kitchen, robot ", robot.id, " is at location: ", robot.location)
     robot.state = 'kitchen'
     # TODO its collect order - logic for this
     robot.state = 'moving-to-table'
@@ -48,9 +53,7 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
 
     end = time.time()
 
-    print("robot ", robot.id, " executed policy 1: ", savedKitchenPolicy)
-    print("and policy two: ", savedTablePolicy) 
-    print("total policy length: ", len(savedKitchenPolicy) + len(savedTablePolicy))
+    
     print("robot ", robot.id, " delivery time: ", end - start, " seconds")
     print()
     # TODO its delivered order - logic for this
@@ -205,53 +208,69 @@ class WaiterRobotsNode(object):
         # loop through robots that are in the oder attribution sate and calculate their respective policies
         lock.acquire()
 
-        idlingRobots = []
+       
 
         waitingForRobots = True
 
         while (waitingForRobots):
+            idlingRobots = []
 
             for robot in self.robots:
                 if robot.state == 'order-attribution':
                 
                     idlingRobots.append(robot)
                     waitingForRobots = False
+        
             
             if len(idlingRobots) == 0:
                 print("no robots available to take order at time: ", time.time(), "sleeping for 5 seconds")
                 time.sleep(5)
         
-        # for each robot calculate the policy to the kitchen and the table
-        policies = []
-        for robot in idlingRobots:
-            kitchenPolicy = self.pathPlanning(robot, robot.location, kitchenGoalStates)
-       
-            # find the goal state that the kitchen policy leads to
-            initialState = self.findEndStateFromPolicy(robot.location, kitchenPolicy[0]) 
+            if waitingForRobots == False:
+              
+                # for each robot calculate the policy to the kitchen and the table
+                policies = []
+                for robot in idlingRobots:
+                    kitchenPolicy = self.pathPlanning(robot, robot.location, kitchenGoalStates)
+            
+                    # find the goal state that the kitchen policy leads to
+                    initialState = self.findEndStateFromPolicy(robot.location, kitchenPolicy[0]) 
 
-            tablePolicy = self.pathPlanning(robot, initialState, tableGoalStates)
-            policies.append((kitchenPolicy, tablePolicy,robot.id))
+                    tablePolicy = self.pathPlanning(robot, initialState, tableGoalStates)
+                    policies.append((kitchenPolicy, tablePolicy,robot.id))
 
         
-        
+                print()
+                # print each policy generated nicely
+                for policy in policies:
+                    print("robot ", policy[2], " kitchen policy: ", policy[0][0], " table policy: ", policy[1][0])
+                print()
       
-        # assign the order to the robot with the shortest path
-        shortestPath = 40 # we know the max path generated is 20 each way so this is a safe upper bound
-        shortestPolicyIndex = 0
-       
-        for i in range(0, len(policies)):
-            if len(policies[i][0][0]) + len(policies[i][1][0]) < shortestPath:
-                shortestPath = len(policies[i][0][0]) + len(policies[i][1][0])
-                shortestPolicyIndex = i
-        
-        if shortestPath >= 40:
-            print("no path found to order")
-            return
+                # assign the order to the robot with the shortest path
+                shortestPath = 40 # we know the max path generated is 20 each way so this is a safe upper bound
+                shortestPolicyIndex = 0
+            
+                for i in range(0, len(policies)):
+                    if len(policies[i][0][0]) + len(policies[i][1][0]) < shortestPath:
+                        shortestPath = len(policies[i][0][0]) + len(policies[i][1][0])
+                        shortestPolicyIndex = i
+                
+                if (len(policies[shortestPolicyIndex][0][0]) >= 19 or len(policies[shortestPolicyIndex][1][0]) >= 19):
+                    #
+                    print("no path found to order for")
+                    # print("kitchen policy: ", policies[shortestPolicyIndex][0][0])
+                    # print("table policy: ", policies[shortestPolicyIndex][1][0])
+                    # print() 
+                    waitingForRobots = True
         # assign the order to the robot with the shortest path
         # TODO send off 
 
         
         self.robots[policies[shortestPolicyIndex][2]].state ='moving-to-kitchen'
+        self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][0][0])
+        self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][1][0])
+        print("table policy: ", policies[shortestPolicyIndex][1][0] )
+
         lock.release()
   
         x = threading.Thread(target=executionThread, args=(self, self.robots[policies[shortestPolicyIndex][2]], policies[shortestPolicyIndex], kitchenGoalStates, tableGoalStates))
@@ -569,6 +588,7 @@ class WaiterRobotsNode(object):
 
     def applyNegativeAlongPath(self, rewards, negativePath, initialState):
         # for each state in the negative path, apply a negative reward TODO fix to go from initial state
+
         negativePathRewardValue = -2
         currentState = initialState
         for i in range (0, len(negativePath)):
@@ -585,6 +605,7 @@ class WaiterRobotsNode(object):
             elif (action == 3):
                 currentState = (currentState[0] + 1, currentState[1])
             # apply negative reward to state
+            # print((currentState[1], currentState[0]))
             rewards[currentState[1]][currentState[0]] = negativePathRewardValue
             
         return rewards
@@ -635,7 +656,7 @@ class WaiterRobotsNode(object):
         for i in range (0, len(self.robots)):  
             if i != robot.id or self.robots[i].location != initialState:
                 
-                rewards[self.robots[i].location[1]][self.robots[i].location[0]] = -1
+                rewards[self.robots[i].location[1]][self.robots[i].location[0]] = -2
          
    
 

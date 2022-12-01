@@ -12,12 +12,13 @@ import numpy as np
 import math
 
 class Robot(object):
+    
     def __init__(self, robotId, pose, state, location, assignmentPoint):
         self.id = robotId
         self.pose = pose
         self._state = state
         # states include = "kitchen" "table" "demand-rate" "assignment-point" "order-attribution"
-        self.activePaths = [] # array of (policies, utility) mappings
+        self.activePaths = [] # array of policies[]
         self.location = location
         self.assignmentPoint = assignmentPoint
         # self.tf_message = tfMessage()
@@ -25,6 +26,7 @@ class Robot(object):
 
         robot_prefix = "robot_"+str(self.id)
         # robot_prefix = ""
+
         odom_Sub = rospy.Subscriber(robot_prefix+"/odom", Odometry, self.odomCallback)
 
 
@@ -70,7 +72,7 @@ class Robot(object):
 
         #path is (policy, utility) mapping
 
-        policy = path[0]
+        policy = np.copy(path[0])
         utility = path[1]
 
 
@@ -79,9 +81,13 @@ class Robot(object):
 
         # for each action in the policy 0, 1, 2 ,3 = up, down, left, right
 
+
+
         while len(policy) > 0:
             # previouse location
             prevLocation = self.location
+
+            print("robot: ", self.id, " executing policy action: ", policy[0])
 
             rotate(self,pub,policy[0])
             moveForwardOneSquare(self,pub)
@@ -123,7 +129,8 @@ class Robot(object):
                     if len(self.activePaths[0]) > 0:
                         self.activePaths[0].pop(0)
 
-       
+                if len(policy) > 0:
+                    policy = policy[1:]
 
 
 
@@ -141,7 +148,7 @@ def moveForwardOneSquare (self, pub):
     i =0
     rate = rospy.Rate(10) # 10hz
     threshold = 0.1
-    cellSize = 2.81
+    cellSize = 2.8
     while (xdif < (cellSize - threshold) and ydif  < (cellSize - threshold)):
             base_data = Twist()
             base_data.linear.x = 1
