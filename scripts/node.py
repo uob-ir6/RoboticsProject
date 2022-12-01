@@ -24,8 +24,12 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
     # thread to execute the policies
     print()
 
-    start = time.time()
     
+    savedKitchenPolicy = np.copy(shortestPolicies[0][0])
+    savedTablePolicy = np.copy(shortestPolicies[1][0])
+
+    start = time.time()
+
     # add the policies to the robots active paths
     robot.activePaths.append(shortestPolicies[0][0])
     robot.activePaths.append(shortestPolicies[1][0])
@@ -44,9 +48,9 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
 
     end = time.time()
 
-    print("robot ", robot.id, " executed policy 1: ", shortestPolicies[0][0])
-    print("and policy two: ", shortestPolicies[1][0]) 
-    print("total policy length: ", len(shortestPolicies[0][0]) + len(shortestPolicies[1][0]))
+    print("robot ", robot.id, " executed policy 1: ", savedKitchenPolicy)
+    print("and policy two: ", savedTablePolicy) 
+    print("total policy length: ", len(savedKitchenPolicy) + len(savedTablePolicy))
     print("robot ", robot.id, " delivery time: ", end - start, " seconds")
     print()
     # TODO its delivered order - logic for this
@@ -203,12 +207,19 @@ class WaiterRobotsNode(object):
 
         idlingRobots = []
 
-        for robot in self.robots:
-            if robot.state == 'order-attribution':
-             
-                idlingRobots.append(robot)
-        
+        waitingForRobots = True
 
+        while (waitingForRobots):
+
+            for robot in self.robots:
+                if robot.state == 'order-attribution':
+                
+                    idlingRobots.append(robot)
+                    waitingForRobots = False
+            
+            if len(idlingRobots) == 0:
+                print("no robots available to take order at time: ", time.time(), "sleeping for 5 seconds")
+                time.sleep(5)
         
         # for each robot calculate the policy to the kitchen and the table
         policies = []
@@ -221,9 +232,7 @@ class WaiterRobotsNode(object):
             tablePolicy = self.pathPlanning(robot, initialState, tableGoalStates)
             policies.append((kitchenPolicy, tablePolicy,robot.id))
 
-        if len(policies) == 0:
-            print("no robots available to take order")
-            return
+        
         
       
         # assign the order to the robot with the shortest path
