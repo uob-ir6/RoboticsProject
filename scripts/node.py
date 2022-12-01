@@ -15,8 +15,37 @@ from robot import Robot
 import sys
 from nav_msgs.msg import OccupancyGrid, Odometry
 from std_msgs.msg import String
+import threading
+
+def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalStates):
+    # thread to execute the policies
+    
+    # add the policies to the robots active paths
+    robot.activePaths.append(shortestPolicies[0][0])
+    robot.activePaths.append(shortestPolicies[1][0])
+
+    # tell the robot to move to the follow the path and update its state - will need utility for this aswell
+    robot.state = 'moving-to-kitchen'
+    robot.motion(shortestPolicies[0],kitchenGoalStates)
+    robot.activePaths.pop(0)
+    robot.state = 'kitchen'
+    # TODO its collect order - logic for this
+    robot.state = 'moving-to-table'
+    robot.motion(shortestPolicies[1],tableGoalStates)
+    robot.activePaths.pop(0)
+    robot.state = 'table'
+    
+    
+    # TODO its delivered order - logic for this
+    # TODO probably should of logged for all the above
+
+    # add the path to the robots active path list - again utility is needed for this
+
+    # execute policy 
+    # robot state update 
 
 
+    pass
 
 class WaiterRobotsNode(object):
 
@@ -52,10 +81,10 @@ class WaiterRobotsNode(object):
 
        
         self.initialiseMapAndRobots(2)
+        self.initialsiePathPlanningMDP()
 
-
-        # # start order attributiob subscriber 
-        # rospy.Subscriber("/order", String, self.orderAttribution)
+        # start order attributiob subscriber 
+        rospy.Subscriber("/order", String, self.orderAttribution, queue_size=1)
         
         # self.printMap()
 
@@ -65,8 +94,8 @@ class WaiterRobotsNode(object):
 
         #initialise path planning mdp model
 
-        self.initialsiePathPlanningMDP()
-        path = self.pathPlanning(self.robots[0], (3,1),[(10,10)])
+    
+        # path = self.pathPlanning(self.robots[0], (3,1),[(10,10)])
 
 
 
@@ -77,8 +106,8 @@ class WaiterRobotsNode(object):
         # but it kinda works 
 
         # path = ([1,1,1,1,1,1,1,1,1],[])
-        goalStates = [(3,1)]
-        self.robots[0].motion(path,goalStates)
+        # goalStates = [(3,1)]
+        # self.robots[0].motion(path,goalStates)
         
         # self.orderModel(6)
     
@@ -121,16 +150,16 @@ class WaiterRobotsNode(object):
         startingLocations = [(4,1),(5,1),(6,1),(7,1) , (10,3),(10,4),(10,5),(10,6),(10,7)]
         
         # list table locations for convinience -> done manually can do automatically using the map
-        tableLocations = [(2,1),(2,5),(2,9),(6,5), (6,9), (10,9)]
+        self.tableLocations = [(2,1),(2,5),(2,9),(6,5), (6,9), (10,9)]
 
         # initialise robots with their robot id and their pose (x,y,theta) and their state (), their positional state location <x,y> assignment point <x,y>
         for i in range (0, numberOfRobot):
             robotsPose = Pose()
             robotId = i
             pose = robotsPose
-            state = 'idle'
+            state = 'order-attribution'
             location = startingLocations[i]
-            assignmentPoint = tableLocations[i]
+            assignmentPoint = startingLocations[i]
             robot =  Robot(robotId, pose, state, location, assignmentPoint)
             self.robots.append(robot)
 
@@ -140,26 +169,29 @@ class WaiterRobotsNode(object):
         # recieve an order/ get the next order from the queue
         print("order recieved: ", data.data)
         
-        order = data.data # order of the form # tn where n is the table index
+        order = data.data.split(' ')[0] # order of the form # tn where n is the table index
 
         # define the goal states for the kitchen and each table 
 
         # kitchen goal state is (9,2) of the form (x,y)
 
         kitchenState1 = (9,1) 
-        kitchenState2 = (9,2)
+        kitchenState2 = (10,1)
 
         # table goal states are the squares around the table of the form [(x,y), (x,y), (x,y), (x,y)]
 
         # get table index from the order
 
         tableIndex = int(order[1:])
+        print("order for table: ", tableIndex)
 
         kitchenGoalStates = np.concatenate((self.getGoalStates(kitchenState1), self.getGoalStates(kitchenState2)), axis=0)
 
+   
          # table location
-        tableLocation = self.tableLocations[tableIndex]
+        tableLocation = self.tableLocations[tableIndex-1]
         tableGoalStates =  self.getGoalStates(tableLocation)
+        print("table goal states: ", tableGoalStates)
 
         # loop through robots that are in the oder attribution sate and calculate their respective policies
         idlingRobots = []
@@ -170,38 +202,59 @@ class WaiterRobotsNode(object):
         # for each robot calculate the policy to the kitchen and the table
         policies = []
         for robot in idlingRobots:
-            kitchenPolicy = self.pathPlanning(robot, kitchenGoalStates)
-            tablePolicy = self.pathPlanning(kitchenGoalStates, tableGoalStates)
+            kitchenPolicy = self.pathPlanning(robot, robot.location, kitchenGoalStates)
+       
+            # find the goal state that the kitchen policy leads to
+            initialState = self.findEndStateFromPolicy(robot.location, kitchenPolicy[0]) 
+            print("calculated initial state: ", initialState)
+            tablePolicy = self.pathPlanning(robot, initialState, tableGoalStates)
             policies.append((kitchenPolicy, tablePolicy,robot.id))
 
-
-
+        if len(policies) == 0:
+            print("no robots available to take order")
+            return
+        
+      
         # assign the order to the robot with the shortest path
         shortestPath = 40 # we know the max path generated is 20 each way so this is a safe upper bound
         shortestPolicyIndex = 0
-
+       
         for i in range(0, len(policies)):
-            if len(policies[i][0]) + len(policies[i][1]) < shortestPath:
+            if len(policies[i][0][0]) + len(policies[i][1][0]) < shortestPath:
                 shortestPath = len(policies[i][0][0]) + len(policies[i][1][0])
                 shortestPolicyIndex = i
         
+        if shortestPath >= 40:
+            print("no path found to order")
+            return
         # assign the order to the robot with the shortest path
-        print("assigning order to robot: ", policies[shortestPolicyIndex][2], " with path to kitchen: ", policies[shortestPolicyIndex][0][0], " and path to table: ", policies[shortestPolicyIndex][1][0])
         # TODO send off 
 
-        # add the policies to the robots active paths
-        self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][0][0])
-        self.robots[policies[shortestPolicyIndex][2]].activePaths.append(policies[shortestPolicyIndex][1][0])
+        print("order Assigned to robot: ", policies[shortestPolicyIndex][2])
+        print("whos initial location is", self.robots[policies[shortestPolicyIndex][2]].location)
+        print("to go to kitchen: ")
+        print("via policy: ", policies[shortestPolicyIndex][0][0])
+        print("to go to table: ", tableIndex)
+        print("via policy: ", policies[shortestPolicyIndex][1][0])
+        print("from kitchen goal state: ", self.findEndStateFromPolicy(self.robots[policies[shortestPolicyIndex][2]].location, kitchenPolicy[0]) )
 
+        print()
 
-        # tell the robot to move to the follow the path and update its state - will need utility for this aswell
+        x = threading.Thread(target=executionThread, args=(self, self.robots[policies[shortestPolicyIndex][2]], policies[shortestPolicyIndex], kitchenGoalStates, tableGoalStates))
         self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-kitchen'
-        self.robots[policies[shortestPolicyIndex][2]].motion(policies[shortestPolicyIndex][0],kitchenGoalStates)
-        self.robots[policies[shortestPolicyIndex][2]].state = 'kitchen'
-        # TODO its collect order - logic for this
-        self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-table'
-        self.robots[policies[shortestPolicyIndex][2]].motion(policies[shortestPolicyIndex][1],tableGoalStates)
-        self.robots[policies[shortestPolicyIndex][2]].state = 'table'
+        x.start()
+    
+
+        # # tell the robot to move to the follow the path and update its state - will need utility for this aswell
+        # self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-kitchen'
+        # self.robots[policies[shortestPolicyIndex][2]].motion(policies[shortestPolicyIndex][0],kitchenGoalStates)
+        # self.robots[policies[shortestPolicyIndex][2]].activePaths.pop(0)
+        # self.robots[policies[shortestPolicyIndex][2]].state = 'kitchen'
+        # # TODO its collect order - logic for this
+        # self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-table'
+        # self.robots[policies[shortestPolicyIndex][2]].motion(policies[shortestPolicyIndex][1],tableGoalStates)
+        # self.robots[policies[shortestPolicyIndex][2]].activePaths.pop(0)
+        # self.robots[policies[shortestPolicyIndex][2]].state = 'table'
         # TODO its delivered order - logic for this
         # TODO probably should of logged for all the above
 
@@ -210,15 +263,29 @@ class WaiterRobotsNode(object):
         # execute policy 
         # robot state update 
 
-        # remove from active paths 
 
 
         # 
+        self.robots[policies[shortestPolicyIndex][2]].state = 'order-attribution'
         pass
 
+   
 
-
-
+    def findEndStateFromPolicy(self, initialState, policy):
+        # initialState in form (x,y)
+        x = initialState[0]
+        y = initialState[1]
+        for action in policy:
+            if action == 0:
+                y += 1
+            elif action == 1:
+                y -= 1
+            elif action == 2:
+                x -= 1
+            elif action == 3:
+                x += 1 
+        return (x,y)
+ 
     # order simulation model #TODO this is probably a different node
     # will need to listen to the frequency model and add them to a queue
     def orderModel (self, numberOfTable):
@@ -226,6 +293,9 @@ class WaiterRobotsNode(object):
         HIGH = 1 # every factor of 1
         MEDIUM = 2 # every factor of 2
         LOW = 3 # every factor of 3
+        
+        Q = [] #queue of orders
+        
 
         #TODO set timeout between tables
 
@@ -246,7 +316,19 @@ class WaiterRobotsNode(object):
 
             for i in range (0, int(numberOfOrders)):
                 # randomly generate order
-                table = random.randint(1, numberOfTable)
+                
+                while 1:
+                    table = random.randint(1, numberOfTable)
+                    if table not in Q:
+                        break
+                if len(Q)<5:
+                    Q.append(table)
+                    
+                elif Q and len(Q) == 5:
+                    for j in range(0,4):
+                        Q[j] = Q[j+1]
+                    Q[4] = table
+                	             	               	
                 order = 'T' + str(table)
                 # publish order
 
@@ -406,19 +488,19 @@ class WaiterRobotsNode(object):
         # check if there is an obstacle to the left
         if tableLocation[0]-1 >= 0:
             if self.pathStates[tableLocation[1]][tableLocation[0]-1] == ' ':
-                goalStates.append((tableLocation[1],tableLocation[0]-1))
+                goalStates.append((tableLocation[0]-1,tableLocation[1]))
         # check if there is an obstacle to the right
         if tableLocation[0]+1 < len(self.pathStates[tableLocation[1]]):
             if self.pathStates[tableLocation[1]][tableLocation[0]+1] == ' ':
-                goalStates.append((tableLocation[1],tableLocation[0]+1))
+                goalStates.append((tableLocation[0]+1,tableLocation[1]))
         # check if there is an obstacle above
         if tableLocation[1]+1 < len(self.pathStates):
             if self.pathStates[tableLocation[1]+1][tableLocation[0]] == ' ':
-                goalStates.append((tableLocation[1]+1,tableLocation[0]))
+                goalStates.append((tableLocation[0],tableLocation[1]+1))
         # check if there is an obstacle below
         if tableLocation[1]-1 >= 0:
             if self.pathStates[tableLocation[1]-1][tableLocation[0]] == ' ':
-                goalStates.append((tableLocation[1]-1, tableLocation[0]))
+                goalStates.append((tableLocation[0], tableLocation[1] -1))
         
         # returns goal state array of the form [(x,y), (x,y), (x,y), (x,y)]
         return goalStates
@@ -461,11 +543,11 @@ class WaiterRobotsNode(object):
 
             #check if we have reached the goal
             for i in range (0, len(goalStates)):
-                if (currentState == goalStates[i]):
+                if (currentState[0] == goalStates[i][0] and currentState[1] == goalStates[i][1]):
                     found = True
                     break
 
-        print("policy for location: ", currentState, " is: ", policy)
+       
         return policy
 
     def applyNegativeAlongPath(self, rewards, negativePath, initialState):
@@ -508,7 +590,7 @@ class WaiterRobotsNode(object):
             for j in range (0, len(self.pathStates[i])):
                 rewardsRow.append(-0.1)
             rewards.append(rewardsRow)
-        print(rewards)
+
 
 
         # give a reward of 1 for reaching the goal state
@@ -525,9 +607,9 @@ class WaiterRobotsNode(object):
                 # loop throught active paths 
                 for i in range (0, len(robot.activePaths)):
                     # for each policy 
-                    negativePath = robot.activePaths[i][0]
+                    negativePath = robot.activePaths[i]
                     
-                    rewards = self.applyNegativeAlongPath(self, rewards, negativePath, robot.location)
+                    rewards = self.applyNegativeAlongPath(rewards, negativePath, robot.location)
         
 
 
@@ -535,19 +617,15 @@ class WaiterRobotsNode(object):
 
         for i in range (0, len(self.robots)):  
             if i != robot.id or self.robots[i].location != initialState:
-                print("robot: ", i,"is at location: ", self.robots[i].location)
+                
                 rewards[self.robots[i].location[1]][self.robots[i].location[0]] = -1
          
-        #print(rewards nicely)
-        for i in range (0, len(rewards)):
-            print(rewards[i])
+   
 
 
 
         
-        print("reward: ", self.getReward(rewards, (5,1)))
-        print("transition probability: ", self.getTransitionProbabity((5,1), 0, (5,2)))          
-
+        
         # calculate optimal policy
 
         # algorthm for value iteration
@@ -570,13 +648,9 @@ class WaiterRobotsNode(object):
             utilities.append(utilitiesRow)
 
         end = time.time()
-        print("time taken to generate utilities: ", end - start)
+    
 
-        # print(utilities nicely)
-        for i in range (0, len(utilities)):
-            print(utilities[i])
-
-        
+   
         start = time.time()
 
         converged = False
@@ -612,14 +686,14 @@ class WaiterRobotsNode(object):
                         maxChange = abs(previousUtility - utilities[i][j])
 
             conv = conv + 1
-            print("i: ", conv ,": max change: ", maxChange)
+ 
             if (conv > 50):
                 converged = True
         
 
 
         end = time.time()
-        print("time taken to calculate utilities: ", end - start)
+     
         #set utilites array to 0 with noise
         # update utilities based on neighbours
         # repeat until convergence
@@ -643,8 +717,11 @@ class WaiterRobotsNode(object):
 # main method
 if __name__ == '__main__':
     # --- Main Program ---
-    rospy.init_node('waiter_robots_node')
-    node = WaiterRobotsNode()
-    rospy.spin()
+    try:
+        rospy.init_node('waiter_robots_node')
+        node = WaiterRobotsNode()
+        rospy.spin()
+    except rospy.ROSInterruptException:
+        print("error ros interrupt exception")
     # print("hello world")
   

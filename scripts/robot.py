@@ -15,7 +15,7 @@ class Robot(object):
     def __init__(self, robotId, pose, state, location, assignmentPoint):
         self.id = robotId
         self.pose = pose
-        self.states = state
+        self.state = state
         # states include = "kitchen" "table" "demand-rate" "assignment-point" "order-attribution"
         self.activePaths = [] # array of (policies, utility) mappings
         self.location = location
@@ -77,7 +77,11 @@ class Robot(object):
 
 
             #   execute the action
-            print("executing action: ", policy[0])
+            print("policy: ", policy)
+            print("this shoudl be the same as: ", self.activePaths[0])
+            print("where we are now executing the action: ", policy[0])
+            print()
+
             rotate(self,pub,policy[0])
             moveForwardOneSquare(self,pub)
 
@@ -113,9 +117,10 @@ class Robot(object):
                 # TODO will likely have to use publishers and subscribers to update the transition model
                 # super(WaiterRobotsNode, self).updateTransitionProbabilities((prevLocation[0], prevLocation[1]), policy[0], expectedLocation )
 
-                policy.pop(0)
+                
                 if len(self.activePaths ) > 0:
-                    self.activePaths[0].pop(0)
+                    if len(self.activePaths[0]) > 0:
+                        self.activePaths[0].pop(0)
 
        
 
@@ -184,10 +189,7 @@ def rotate (self, pub, direction ):
     yawTarget = convertTo360(findYaw(targetDirection[0],targetDirection[1]))
 
 
-    print("yaw current: ", yawCurrent)
-    print("yaw target: ", yawTarget)
 
-    print("modular difference: ", (60 - 325) % 360 )
 
     # determine wwhich direction to rotate 
 
