@@ -17,6 +17,9 @@ from nav_msgs.msg import OccupancyGrid, Odometry
 from std_msgs.msg import String
 import threading
 
+
+lock = threading.Lock()
+
 def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalStates):
     # thread to execute the policies
     
@@ -25,7 +28,7 @@ def executionThread(self, robot, shortestPolicies, kitchenGoalStates, tableGoalS
     robot.activePaths.append(shortestPolicies[1][0])
 
     # tell the robot to move to the follow the path and update its state - will need utility for this aswell
-    robot.state = 'moving-to-kitchen'
+
     robot.motion(shortestPolicies[0],kitchenGoalStates)
     robot.activePaths.pop(0)
     robot.state = 'kitchen'
@@ -165,7 +168,10 @@ class WaiterRobotsNode(object):
 
 
 
-    def orderAttribution(self,data):
+    def orderAttribution(self, data):
+        print("robot 0 state: ", self.robots[0].state)
+        print("robot 1 state: ", self.robots[1].state)
+
         # recieve an order/ get the next order from the queue
         print("order recieved: ", data.data)
         
@@ -194,10 +200,16 @@ class WaiterRobotsNode(object):
         print("table goal states: ", tableGoalStates)
 
         # loop through robots that are in the oder attribution sate and calculate their respective policies
+        lock.acquire()
+
         idlingRobots = []
+        print("idling robots for table ", tableIndex, ": ", idlingRobots)
         for robot in self.robots:
             if robot.state == 'order-attribution':
+                print("recorded state: ", robot.state, "for robot: ", robot.id)
                 idlingRobots.append(robot)
+        
+        print("idling robots for table ", tableIndex, ": ", idlingRobots)
         
         # for each robot calculate the policy to the kitchen and the table
         policies = []
@@ -239,9 +251,14 @@ class WaiterRobotsNode(object):
         print("from kitchen goal state: ", self.findEndStateFromPolicy(self.robots[policies[shortestPolicyIndex][2]].location, kitchenPolicy[0]) )
 
         print()
-
+        self.robots[policies[shortestPolicyIndex][2]].state ='moving-to-kitchen'
+        lock.release()
+        print("new robot state: for robot: ", self.robots[policies[shortestPolicyIndex][2]].id, "is: ", self.robots[policies[shortestPolicyIndex][2]].state)
         x = threading.Thread(target=executionThread, args=(self, self.robots[policies[shortestPolicyIndex][2]], policies[shortestPolicyIndex], kitchenGoalStates, tableGoalStates))
-        self.robots[policies[shortestPolicyIndex][2]].state = 'moving-to-kitchen'
+
+        print("end robot 0 state: ", self.robots[0].state)
+        print("end robot 1 state: ", self.robots[1].state)
+        
         x.start()
     
 
@@ -266,7 +283,7 @@ class WaiterRobotsNode(object):
 
 
         # 
-        self.robots[policies[shortestPolicyIndex][2]].state = 'order-attribution'
+        # self.robots[policies[shortestPolicyIndex][2]].state = 'order-attribution'
         pass
 
    

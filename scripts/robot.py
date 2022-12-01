@@ -15,7 +15,7 @@ class Robot(object):
     def __init__(self, robotId, pose, state, location, assignmentPoint):
         self.id = robotId
         self.pose = pose
-        self.state = state
+        self._state = state
         # states include = "kitchen" "table" "demand-rate" "assignment-point" "order-attribution"
         self.activePaths = [] # array of (policies, utility) mappings
         self.location = location
@@ -49,10 +49,18 @@ class Robot(object):
         # rospy.loginfo(rospy.get_caller_id() + "I heard %s", data.data)
         self.pose = data.pose.pose
        
-        
-        
 
-    def motion (self, path,goalStates) :
+    
+    @property
+    def state(self):
+        return self._state
+
+    @state.setter
+    def state(self, value):
+        self._state = value   
+
+
+    def motion (self, path, goalStates) :
         robot_prefix = "robot_"+str(self.id)
         # robot_prefix = ""
         pub = rospy.Publisher(robot_prefix+'/cmd_vel', Twist, queue_size=100)
