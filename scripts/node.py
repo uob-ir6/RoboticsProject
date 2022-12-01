@@ -95,10 +95,7 @@ class WaiterRobotsNode(object):
         # start order attributiob subscriber 
         rospy.Subscriber("/order", String, self.orderAttribution, queue_size=1)
         
-        # self.printMap()
-
-        # print(self.robots)
-
+        
         # self.robots[0].motion()
 
         #initialise path planning mdp model
@@ -137,7 +134,7 @@ class WaiterRobotsNode(object):
         
 
     def initialiseMapAndRobots(self, numberOfRobot):
-        print("initialising map and robots...")
+        
         # initialise n*m map with the tables locations T and the kitchen location K 
         # TODO this map is flipped such that it matches our designs and grid, not sure if that was the best call
         self.map = np.array([ 
@@ -397,8 +394,7 @@ class WaiterRobotsNode(object):
 
                 
             self.actions.append(actionsRow)
-        print(self.pathStates[8])
-        print(self.actions[4][6])
+   
 
 
         # define transition model
